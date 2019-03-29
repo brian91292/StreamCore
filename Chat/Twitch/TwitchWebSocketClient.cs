@@ -388,8 +388,10 @@ namespace StreamCore.Chat
         /// <param name="msg">The chat message to be sent.</param>
         public static void SendMessage(string msg)
         {
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open && msg.Length > 0)
-                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} :{msg}");
+            if (msg[0] == '/')
+                msg = msg.Substring(1);
+
+            SendCommand(msg);
         }
 
         /// <summary>
@@ -399,7 +401,7 @@ namespace StreamCore.Chat
         public static void SendCommand(string command)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open && command.Length > 0)
-                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} {command}");
+                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} :{command}");
         }
 
         /// <summary>
