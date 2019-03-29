@@ -18,7 +18,8 @@ namespace StreamCore.Chat
     /// </summary>
     public class TwitchWebSocketClient
     {
-        private static readonly Regex _twitchMessageRegex = new Regex(@"(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_]+))?( :(?<Message>.*))?", RegexOptions.Compiled);
+        private static readonly Regex _twitchMessageRegex = new Regex(@"(@(?<Tags>[\S@\/;\-=,#]+) )?(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_]+))?( :(?<Message>.*))?", RegexOptions.Compiled);
+        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled);
 
         private static Random _rand = new Random();
         private static WebSocket _ws;
@@ -453,6 +454,8 @@ namespace StreamCore.Chat
                     twitchMsg.hostString = messageType.Groups["HostName"].Value;
                 if (messageType.Groups["ChannelName"].Success)
                     twitchMsg.channelName = messageType.Groups["ChannelName"].Value;
+                if (messageType.Groups["Tags"].Success)
+                    twitchMsg.tags = _tagRegex.Matches(messageType.Groups["Tags"].Value);
 
                 // If this is a callback from the send function, populate it with our twitch users info/the current room info
                 if (isSendCallback)

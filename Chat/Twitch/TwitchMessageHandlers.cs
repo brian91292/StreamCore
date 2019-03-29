@@ -46,7 +46,6 @@ namespace StreamCore.Chat
         /// </summary>
         public static Action<TwitchMessage> JOIN;
 
-        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled);
         private static bool Initialized = false;
         private static Dictionary<string, Action<TwitchMessage>> _messageHandlers = new Dictionary<string, Action<TwitchMessage>>();
 
@@ -79,13 +78,9 @@ namespace StreamCore.Chat
         /// <returns></returns>
         public static bool InvokeHandler(TwitchMessage twitchMsg)
         {
-            // Find all the message tags
-            var tags = _tagRegex.Matches(twitchMsg.rawMessage);
-
             // Call the appropriate handler for this messageType
             if (_messageHandlers.ContainsKey(twitchMsg.messageType))
             {
-                twitchMsg.tags = tags;
                 _messageHandlers[twitchMsg.messageType]?.Invoke(twitchMsg);
                 return true;
             }
