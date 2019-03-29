@@ -363,7 +363,7 @@ namespace StreamCore.Chat
                             string msg = _sendQueue.Dequeue();
                             Plugin.Log($"Sending message {msg}");
                             _ws.Send(msg);
-                            //OnMessageReceived(msg, true);
+                            OnMessageReceived(msg, true);
                             _messagesSent++;
                         }
                     }
@@ -448,14 +448,13 @@ namespace StreamCore.Chat
                 TwitchMessage twitchMsg = new TwitchMessage();
                 twitchMsg.rawMessage = rawMessage;
                 twitchMsg.messageType = messageType.Groups["MessageType"].Value;
+                twitchMsg.tags = _tagRegex.Matches(rawMessage);
                 if (messageType.Groups["Message"].Success)
                     twitchMsg.message =  messageType.Groups["Message"].Value;
                 if (messageType.Groups["HostName"].Success)
                     twitchMsg.hostString = messageType.Groups["HostName"].Value;
                 if (messageType.Groups["ChannelName"].Success)
                     twitchMsg.channelName = messageType.Groups["ChannelName"].Value;
-                if (messageType.Groups["Tags"].Success)
-                    twitchMsg.tags = _tagRegex.Matches(messageType.Groups["Tags"].Value);
 
                 // If this is a callback from the send function, populate it with our twitch users info/the current room info
                 if (isSendCallback)
@@ -464,6 +463,7 @@ namespace StreamCore.Chat
                     twitchMsg.roomId = ChannelInfo.ContainsKey(TwitchLoginConfig.Instance.TwitchChannelName) ? ChannelInfo[TwitchLoginConfig.Instance.TwitchChannelName].roomId : string.Empty;
                     twitchMsg.channelName = TwitchLoginConfig.Instance.TwitchChannelName;
                     twitchMsg.hostString = OurTwitchUser.displayName;
+                    Plugin.Log("Invoking received callback for send!");
                 }
 
                 // If the login fails, disconnect the websocket
