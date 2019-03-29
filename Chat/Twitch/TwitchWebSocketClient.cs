@@ -18,7 +18,7 @@ namespace StreamCore.Chat
     /// </summary>
     public class TwitchWebSocketClient
     {
-        private static readonly Regex _twitchMessageRegex = new Regex(@"(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_]+))?( :(?<Message>.*))?");
+        private static readonly Regex _twitchMessageRegex = new Regex(@"(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_]+))?( :(?<Message>.*))?", RegexOptions.Compiled);
 
         private static Random _rand = new Random();
         private static WebSocket _ws;

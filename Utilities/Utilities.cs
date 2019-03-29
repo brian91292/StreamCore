@@ -20,6 +20,8 @@ namespace StreamCore.Utils
 {
     public class Utilities
     {
+        private static readonly Regex _stripHtmlRegex = new Regex("<.*?>", RegexOptions.Compiled);
+
         public static void EmptyDirectory(string directory, bool delete = true)
         {
             if (Directory.Exists(directory))
@@ -182,7 +184,7 @@ namespace StreamCore.Utils
 
         public static string StripHTML(string input)
         {
-            return Regex.Replace(input, "<.*?>", String.Empty);
+            return _stripHtmlRegex.Replace(input, string.Empty);
         }
     };
 }

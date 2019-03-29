@@ -46,7 +46,7 @@ namespace StreamCore.Chat
         /// </summary>
         public static Action<TwitchMessage> JOIN;
 
-        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)");
+        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled);
         private static bool Initialized = false;
         private static Dictionary<string, Action<TwitchMessage>> _messageHandlers = new Dictionary<string, Action<TwitchMessage>>();
 
