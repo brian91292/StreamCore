@@ -14,6 +14,7 @@ using IllusionPlugin;
 using System.Reflection;
 using System.IO.Compression;
 using CustomUI.Utilities;
+using StreamCore.Chat;
 
 namespace StreamCore.Utils
 {
@@ -77,7 +78,6 @@ namespace StreamCore.Utils
                 yield return new WaitForSeconds(0.25f);
 
                 File.Delete(zipPath);
-
                 try
                 {
                     if (extracted)

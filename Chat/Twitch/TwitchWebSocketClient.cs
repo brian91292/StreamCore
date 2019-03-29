@@ -13,21 +13,9 @@ using WebSocketSharp;
 
 namespace StreamCore.Chat
 {
-    public class ChatMessage
-    {
-        public string msg = String.Empty;
-        public TwitchMessage twitchMessage = new TwitchMessage();
-        public List<EmoteInfo> parsedEmotes = new List<EmoteInfo>();
-        public List<BadgeInfo> parsedBadges = new List<BadgeInfo>();
-        public bool isActionMessage = false;
-
-        public ChatMessage(string msg, TwitchMessage messageInfo)
-        {
-            this.msg = msg;
-            this.twitchMessage = messageInfo;
-        }
-    };
-
+    /// <summary>
+    /// The main Twitch websocket client.
+    /// </summary>
     public class TwitchWebSocketClient
     {
         private static readonly Regex _twitchMessageRegex = new Regex(@"(:(?<HostName>[a-z0-9\.!@]+) )?(?<!#)(?<!\S)(?<MessageType>[A-Z]+(?!\S))( \*)?( #(?<ChannelName>[\S]+))?( :(?<Message>.*))?");
@@ -35,18 +23,67 @@ namespace StreamCore.Chat
         private static Random _rand = new Random();
         private static WebSocket _ws;
 
+        /// <summary>
+        /// True if the client has been initialized already.
+        /// </summary>
         public static bool Initialized { get; private set; } = false;
+
+        /// <summary>
+        /// True if the client is connected to Twitch.
+        /// </summary>
         public static bool Connected { get; private set; } = false;
+
+        /// <summary>
+        /// True if the user has entered valid login details.
+        /// </summary>
         public static bool LoggedIn { get; private set; } = true;
+
+        /// <summary>
+        /// The last time the client established a connection to the Twitch servers.
+        /// </summary>
         public static DateTime ConnectionTime { get; private set; }
+
+        /// <summary>
+        /// A dictionary of channel information for every channel we've joined during this session, the key is the channel name.
+        /// </summary>
         public static Dictionary<string, TwitchRoom> ChannelInfo { get; private set; } = new Dictionary<string, TwitchRoom>();
+
+        /// <summary>
+        /// A reference to the currently logged in Twitch user, will say **Invalid Twitch User** if the user is not logged in.
+        /// </summary>
         public static TwitchUser OurTwitchUser { get; set; } = new TwitchUser("*Invalid Twitch User*");
 
+        /// <summary>
+        /// Callback for when the user changes the TwitchChannelName in TwitchLoginInfo.ini. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<string> OnTwitchChannelUpdated;
+
+        /// <summary>
+        /// Callback for when TwitchLoginInfo.ini is updated *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action OnConfigUpdated;
+
+        /// <summary>
+        /// Callback that occurs when a connection to the Twitch servers is successfully established. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action OnConnected;
+
+        /// <summary>
+        /// Callback that occurs when we get disconnected from the Twitch servers. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action OnDisconnected;
-        
+
+        /// <summary>
+        /// True if the TwitchChannelName in TwitchLoginInfo.ini is valid, and we've joined the channel successfully.
+        /// </summary>
+        public static bool IsChannelValid
+        {
+            get
+            {
+                return ChannelInfo.ContainsKey(TwitchLoginConfig.Instance.TwitchChannelName) && ChannelInfo[TwitchLoginConfig.Instance.TwitchChannelName].roomId != String.Empty;
+            }
+        }
+
         private static DateTime _sendLimitResetTime = DateTime.Now;
         private static Queue<string> _sendQueue = new Queue<string>();
         
@@ -61,13 +98,6 @@ namespace StreamCore.Chat
             get { return (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch
         }
 
-        public static bool IsChannelValid
-        {
-            get
-            {
-                return ChannelInfo.ContainsKey(TwitchLoginConfig.Instance.TwitchChannelName) && ChannelInfo[TwitchLoginConfig.Instance.TwitchChannelName].roomId != String.Empty;
-            }
-        }
         
         /// <summary>
         /// Call this function once OnApplicationStart if you intend to use the Twitch chat API
@@ -144,6 +174,9 @@ namespace StreamCore.Chat
             }
         }
 
+        /// <summary>
+        /// Shuts down the websocket client, called internally. There is no need to call this function.
+        /// </summary>
         public static void Shutdown()
         {
             if (Connected)
@@ -271,7 +304,7 @@ namespace StreamCore.Chat
                             Plugin.Log(ex.ToString());
                         }
 
-                        // Invoke OnConnected event
+                        // Invoke OnDisconnected event
                         if (OnDisconnected != null)
                         {
                             foreach (var ev in OnDisconnected.GetInvocationList())
@@ -339,24 +372,40 @@ namespace StreamCore.Chat
             Plugin.Log("Exiting!");
         }
 
+        /// <summary>
+        /// Sends a raw message to the Twitch server.
+        /// </summary>
+        /// <param name="msg">The raw message to be sent.</param>
         public static void SendRawMessage(string msg)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
                 _sendQueue.Enqueue(msg);
         }
 
+        /// <summary>
+        /// Sends a chat message to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
+        /// </summary>
+        /// <param name="msg">The chat message to be sent.</param>
         public static void SendMessage(string msg)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open && msg.Length > 0)
                 _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} {(msg[0] == '/' ? "" : ":")}{msg}");
         }
         
+        /// <summary>
+        /// Joins the specified Twitch channel.
+        /// </summary>
+        /// <param name="channel">The Twitch channel name to join (lowercase, no spaces).</param>
         public static void JoinChannel(string channel)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
                 SendRawMessage($"JOIN #{channel}");
         }
 
+        /// <summary>
+        /// Parts from the specified Twitch channel.
+        /// </summary>
+        /// <param name="channel">The Twitch channel name to part (lowercase, no spaces).</param>
         public static void PartChannel(string channel)
         {
             if (channel == TwitchLoginConfig.Instance.TwitchChannelName)

@@ -8,22 +8,51 @@ using System.Threading.Tasks;
 
 namespace StreamCore.Chat
 {
+    /// <summary>
+    /// All the message handlers associated with a Twitch stream (PRIVMSG, ROOMSTATE, USERNOTICE, etc).
+    /// </summary>
     public class TwitchMessageHandlers
     {
-        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)");
-
-        public static bool Initialized { get; private set; } = false;
-        private static Dictionary<string, Action<TwitchMessage>> _messageHandlers = new Dictionary<string, Action<TwitchMessage>>();
-
+        /// <summary>
+        /// Twitch PRIVMSG event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> PRIVMSG;
+        /// <summary>
+        /// Twitch ROOMSTATE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> ROOMSTATE;
+        /// <summary>
+        /// Twitch USERNOTICE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> USERNOTICE;
+        /// <summary>
+        /// Twitch USERSTATE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> USERSTATE;
+        /// <summary>
+        /// Twitch CLEARCHAT event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> CLEARCHAT;
+        /// <summary>
+        /// Twitch CLEARMSG event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> CLEARMSG;
+        /// <summary>
+        /// Twitch MODE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> MODE;
+        /// <summary>
+        /// Twitch JOIN event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// </summary>
         public static Action<TwitchMessage> JOIN;
 
+        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)");
+        private static bool Initialized = false;
+        private static Dictionary<string, Action<TwitchMessage>> _messageHandlers = new Dictionary<string, Action<TwitchMessage>>();
+
+        /// <summary>
+        /// Initializes the internal message handler system. There is no need to call this function; it's called internally.
+        /// </summary>
         public static void Initialize()
         {
             if (Initialized)
@@ -43,6 +72,11 @@ namespace StreamCore.Chat
             Initialized = true;
         }
 
+        /// <summary>
+        /// Invokes the proper message handler associated with the provided twitch message, assuming it exists.
+        /// </summary>
+        /// <param name="twitchMsg">The twitch message to invoke the message handler for.</param>
+        /// <returns></returns>
         public static bool InvokeHandler(TwitchMessage twitchMsg)
         {
             // Find all the message tags
