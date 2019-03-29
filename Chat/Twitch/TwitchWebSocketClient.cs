@@ -279,7 +279,7 @@ namespace StreamCore.Chat
                         try
                         {
                             DateTime nextPing = DateTime.Now.AddSeconds(30);
-                            while (Connected && _ws.IsConnected)
+                            while (Connected && _ws.ReadyState == WebSocketState.Open)
                             {
                                 //Plugin.Log("Connected and alive!");
                                 Thread.Sleep(500);
