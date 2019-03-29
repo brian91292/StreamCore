@@ -383,19 +383,16 @@ namespace StreamCore.Chat
         }
 
         /// <summary>
-        /// Sends a chat message to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
+        /// Sends an escaped chat message to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
         /// </summary>
         /// <param name="msg">The chat message to be sent.</param>
         public static void SendMessage(string msg)
         {
-            if (msg[0] == '/')
-                msg = msg.Substring(1);
-
-            SendCommand(msg);
+            SendCommand($"\uFEFF{msg}");
         }
 
         /// <summary>
-        /// Sends a chat command to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
+        /// Sends an unescaped chat command to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
         /// </summary>
         /// <param name="command">The chat command to be sent.</param>
         public static void SendCommand(string command)
