@@ -389,9 +389,19 @@ namespace StreamCore.Chat
         public static void SendMessage(string msg)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open && msg.Length > 0)
-                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} {(msg[0] == '/' ? "" : ":")}{msg}");
+                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} :{msg}");
         }
-        
+
+        /// <summary>
+        /// Sends a chat command to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
+        /// </summary>
+        /// <param name="command">The chat command to be sent.</param>
+        public static void SendCommand(string command)
+        {
+            if (LoggedIn && _ws.ReadyState == WebSocketState.Open && command.Length > 0)
+                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} {command}");
+        }
+
         /// <summary>
         /// Joins the specified Twitch channel.
         /// </summary>
