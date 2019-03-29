@@ -30,8 +30,7 @@ namespace StreamCore.Chat
 
     public class TwitchWebSocketClient
     {
-        private static readonly Regex _twitchMessageRegex = new Regex(@":(?<HostName>[\S]+) (?<MessageType>[\S]+) #(?<ChannelName>[\S]+)");
-        private static readonly Regex _messageRegex = new Regex(@" #[\S]+ :(?<Message>.*)");
+        private static readonly Regex _twitchMessageRegex = new Regex(@"(:(?<HostName>[a-z0-9\.!@]+) )?(?<!#)(?<!\S)(?<MessageType>[A-Z]+(?!\S))( \*)?( #(?<ChannelName>[\S]+))?( :(?<Message>.*))?");
 
         private static Random _rand = new Random();
         private static WebSocket _ws;
@@ -330,6 +329,7 @@ namespace StreamCore.Chat
                             string msg = _sendQueue.Dequeue();
                             Plugin.Log($"Sending message {msg}");
                             _ws.Send(msg);
+                            OnMessageReceived(msg, true);
                             _messagesSent++;
                         }
                     }
@@ -367,6 +367,60 @@ namespace StreamCore.Chat
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
                 SendRawMessage($"PART #{channel}");
         }
+
+        private static void OnMessageReceived(string rawMessage, bool isSendCallback = false)
+        {
+            try
+            {
+                var messageType = _twitchMessageRegex.Match(rawMessage);
+                if (messageType.Length == 0)
+                {
+                    Plugin.Log($"Unhandled message: {rawMessage}");
+                    return;
+                }
+
+                if(!messageType.Groups["MessageType"].Success)
+                {
+                    Plugin.Log($"Failed to get messageType for message {rawMessage}");
+                    return;
+                }
+                
+                // Instantiate our twitch message
+                TwitchMessage twitchMsg = new TwitchMessage();
+                twitchMsg.rawMessage = rawMessage;
+                twitchMsg.messageType = messageType.Groups["MessageType"].Value;
+                if (messageType.Groups["Message"].Success)
+                    twitchMsg.message =  messageType.Groups["Message"].Value;
+                if (messageType.Groups["HostName"].Success)
+                    twitchMsg.hostString = messageType.Groups["HostName"].Value;
+                if (messageType.Groups["ChannelName"].Success)
+                    twitchMsg.channelName = messageType.Groups["ChannelName"].Value;
+
+                // If this is a callback from the send function, populate it with our twitch users info/the current room info
+                if (isSendCallback)
+                {
+                    twitchMsg.user = OurTwitchUser;
+                    twitchMsg.roomId = ChannelInfo.ContainsKey(TwitchLoginConfig.Instance.TwitchChannelName) ? ChannelInfo[TwitchLoginConfig.Instance.TwitchChannelName].roomId : string.Empty;
+                    twitchMsg.channelName = TwitchLoginConfig.Instance.TwitchChannelName;
+                    twitchMsg.hostString = OurTwitchUser.displayName;
+                }
+
+                // If the login fails, disconnect the websocket
+                if(twitchMsg.messageType == "NOTICE")
+                {
+                    if (twitchMsg.message.StartsWith("Login authentication failed")) {
+                        Plugin.Log($"Invalid Twitch login info! Closing connection!");
+                        LoggedIn = false;
+                        _ws.Close();
+                    }
+                }
+                TwitchMessageHandlers.InvokeHandler(twitchMsg);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log(ex.ToString());
+            }
+        }
         
         private static void Ws_OnMessage(object sender, MessageEventArgs ev)
         {
@@ -382,35 +436,8 @@ namespace StreamCore.Chat
                     _ws.Send("PONG :tmi.twitch.tv");
                     return;
                 }
-
-                var messageType = _twitchMessageRegex.Match(rawMessage);
-                if (messageType.Length == 0)
-                {
-                    if(rawMessage.Contains("NOTICE * :Login authentication failed"))
-                    {
-                        Plugin.Log($"Invalid Twitch login info! Closing connection!");
-                        LoggedIn = false;
-                        _ws.Close();
-                        return;
-                    }
-
-                    Plugin.Log($"Unhandled message: {rawMessage}");
-                    return;
-                }
-
-                string channelName = messageType.Groups["ChannelName"].Value;
-                if (channelName != TwitchLoginConfig.Instance.TwitchChannelName)
-                    return;
-
-                // Instantiate our twitch message
-                TwitchMessage twitchMsg = new TwitchMessage();
-                twitchMsg.rawMessage = rawMessage;
-                twitchMsg.message = _messageRegex.Match(twitchMsg.rawMessage).Groups["Message"].Value;
-                twitchMsg.hostString = messageType.Groups["HostName"].Value;
-                twitchMsg.messageType = messageType.Groups["MessageType"].Value;
-                twitchMsg.channelName = channelName;
                 
-                TwitchMessageHandlers.InvokeHandler(twitchMsg);
+                OnMessageReceived(rawMessage);
             }
             catch (Exception ex)
             {

@@ -38,6 +38,7 @@ namespace StreamCore.Chat
             _messageHandlers.Add("CLEARMSG", CLEARMSG_Handler);
             _messageHandlers.Add("MODE", MODE_Handler);
             _messageHandlers.Add("JOIN", JOIN_Handler);
+            _messageHandlers.Add("NOTICE", NOTICE_Handler);
 
             Initialized = true;
         }
@@ -205,6 +206,11 @@ namespace StreamCore.Chat
         {
             //Plugin.Log("MODE message received!");
             SafeInvoke(MODE, twitchMsg);
+        }
+
+        private static void NOTICE_Handler(TwitchMessage twitchMsg)
+        {
+            //SafeInvoke(NOTICE, twitchMsg);
         }
     }
 }

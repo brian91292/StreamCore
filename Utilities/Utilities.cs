@@ -13,6 +13,7 @@ using IllusionInjector;
 using IllusionPlugin;
 using System.Reflection;
 using System.IO.Compression;
+using CustomUI.Utilities;
 
 namespace StreamCore.Utils
 {
@@ -139,7 +140,15 @@ namespace StreamCore.Utils
                 downloadCompleted?.Invoke(web);
             }
         }
-        
+
+        public static IEnumerator DownloadSpriteAsync(string url, Action<Sprite> downloadCompleted)
+        {
+            yield return Download(url, DownloadType.Texture, null, (web) =>
+            {
+                downloadCompleted?.Invoke(UIUtilities.LoadSpriteFromTexture(DownloadHandlerTexture.GetContent(web)));
+            });
+        }
+
         public static IEnumerator DownloadFile(string url, string path)
         {
             yield return Download(url, DownloadType.Raw, null, (web) =>
