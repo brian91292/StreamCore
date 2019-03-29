@@ -72,7 +72,7 @@ namespace StreamCore.Chat
         /// Callback that occurs when we get disconnected from the Twitch servers. *NOT THREAD SAFE, USE CAUTION!*
         /// </summary>
         public static Action OnDisconnected;
-
+        
         /// <summary>
         /// True if the TwitchChannelName in TwitchLoginInfo.ini is valid, and we've joined the channel successfully.
         /// </summary>
@@ -362,7 +362,7 @@ namespace StreamCore.Chat
                             string msg = _sendQueue.Dequeue();
                             Plugin.Log($"Sending message {msg}");
                             _ws.Send(msg);
-                            OnMessageReceived(msg, true);
+                            //OnMessageReceived(msg, true);
                             _messagesSent++;
                         }
                     }
