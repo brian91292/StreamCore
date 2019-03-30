@@ -1,5 +1,6 @@
 ﻿using StreamCore.Chat;
 using StreamCore.Config;
+using StreamCore.SimpleJSON;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,6 +13,10 @@ namespace StreamCore
 {
     public class TwitchAPI
     {
+        // My twitch client id, get your own (╯°□°)╯︵ ┻━┻
+        private static readonly string ClientId = "jg6ij5z8mf8jr8si22i5uq8tobnmde";
+        
+
         public static void GetRoomsForChannel(TwitchChannel channel)
         {
             if (!TwitchWebSocketClient.LoggedIn)
@@ -28,7 +33,7 @@ namespace StreamCore
                 request.Method = "GET";
                 request.Accept = "application/vnd.twitchtv.v5+json";
                 request.Headers.Set("Authorization", $"OAuth {TwitchLoginConfig.Instance.TwitchOAuthToken.Replace("oauth:", "")}");
-                request.Headers.Set("Client-ID", "jg6ij5z8mf8jr8si22i5uq8tobnmde");
+                request.Headers.Set("Client-ID", ClientId);
                 
                 WebResponse response = request.GetResponse();
                 Stream dataStream = response.GetResponseStream();

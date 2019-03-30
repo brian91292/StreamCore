@@ -15,6 +15,13 @@ namespace StreamCore.Chat
         public string topic;
         public string minimumAllowedRole;
         public bool isPreviewable;
+        public string channelId
+        {
+            get
+            {
+                return $"chatrooms:{ownerId}:{channelId}";
+            }
+        }
 
         public static List<TwitchRoom> FromJson(string json)
         {

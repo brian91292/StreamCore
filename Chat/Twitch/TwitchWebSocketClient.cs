@@ -234,7 +234,7 @@ namespace StreamCore.Chat
                         _ws.Send($"NICK {username}");
 
                         if (TwitchLoginConfig.Instance.TwitchChannelName != String.Empty)
-                            _ws.Send($"JOIN #{TwitchLoginConfig.Instance.TwitchChannelName}");
+                            JoinChannel(TwitchLoginConfig.Instance.TwitchChannelName);
 
                         // Display a message in the chat informing the user whether or not the connection to the channel was successful
                         ConnectionTime = DateTime.Now;
@@ -384,69 +384,72 @@ namespace StreamCore.Chat
         }
 
         /// <summary>
-        /// Sends an escaped chat message to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
+        /// Sends an escaped chat message to the channel defined in TwitchLoginInfo.ini.
         /// </summary>
         /// <param name="msg">The chat message to be sent.</param>
         public static void SendMessage(string msg)
         {
-            SendCommand($"\uFEFF{msg}");
+            SendMessage(msg, TwitchLoginConfig.Instance.TwitchChannelName);
         }
 
         /// <summary>
-        /// Sends an unescaped chat command to the current TwitchChannelName that has been entered in TwitchLoginInfo.ini.
+        /// Sends an escaped chat message to the specified channel.
+        /// </summary>
+        /// <param name="msg">The chat message to be sent.</param>
+        /// <param name="channelId">The channel to send the message to.</param>
+        public static void SendMessage(string msg, string channelId)
+        {
+            SendCommand($"\uFEFF{msg}", channelId);
+        }
+
+        /// <summary>
+        /// Sends an unescaped chat command to the channel defined in TwitchLoginInfo.ini.
         /// </summary>
         /// <param name="command">The chat command to be sent.</param>
         public static void SendCommand(string command)
         {
+            SendCommand(command, TwitchLoginConfig.Instance.TwitchChannelName);
+        }
+
+        /// <summary>
+        /// Sends an unescaped chat command to the specified channel.
+        /// </summary>
+        /// <param name="command">The chat command to be sent.</param>
+        /// <param name="channelId">The channel to send the command to.</param>
+        public static void SendCommand(string command, string channelId)
+        {
+            if (channelId == string.Empty)
+                channelId = TwitchLoginConfig.Instance.TwitchChannelName;
+
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open && command.Length > 0)
-                _sendQueue.Enqueue($"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} :{command}");
+                _sendQueue.Enqueue($"PRIVMSG #{channelId} :{command}");
         }
 
         /// <summary>
         /// Joins the specified Twitch channel.
         /// </summary>
-        /// <param name="channel">The Twitch channel name to join.</param>
-        public static void JoinChannel(string channel)
+        /// <param name="channelId">The Twitch channel name to join.</param>
+        public static void JoinChannel(string channelId)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                SendRawMessage($"JOIN #{channel}");
+                SendRawMessage($"JOIN #{channelId}");
         }
 
         /// <summary>
         /// Exits the specified Twitch channel.
         /// </summary>
-        /// <param name="channel">The Twitch channel name to part from.</param>
-        public static void PartChannel(string channel)
+        /// <param name="channelId">The Twitch channel name to part from.</param>
+        public static void PartChannel(string channelId)
         {
-            if (channel == TwitchLoginConfig.Instance.TwitchChannelName)
+            if (channelId == TwitchLoginConfig.Instance.TwitchChannelName)
             {
                 throw new Exception("Cannot part from the channel defined in TwitchLoginConfig.ini.");
             }
 
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                SendRawMessage($"PART #{channel}");
+                SendRawMessage($"PART #{channelId}");
         }
-
-        /// <summary>
-        /// Joins the specified TwitchRoom.
-        /// </summary>
-        /// <param name="room">The TwitchRoom to join.</param>
-        public static void JoinRoom(TwitchRoom room)
-        {
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                SendRawMessage($"JOIN #chatrooms:{room.ownerId}:{room.id}");
-        }
-
-        /// <summary>
-        /// Exits the specified TwitchRoom.
-        /// </summary>
-        /// <param name="room">The TwitchRoom to part from.</param>
-        public static void PartRoom(TwitchRoom room)
-        {
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                SendRawMessage($"PART #chatrooms:{room.ownerId}:{room.id}");
-        }
-
+        
         private static void OnMessageReceived(string rawMessage, bool isSendCallback = false)
         {
             try
