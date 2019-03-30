@@ -52,6 +52,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Net" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
@@ -99,8 +100,9 @@
   <ItemGroup>
     <Compile Include="Chat\ChatMessageBase.cs" />
     <Compile Include="Chat\ChatUserBase.cs" />
-    <Compile Include="Chat\Twitch\TwitchMessageHandlers.cs" />
     <Compile Include="Chat\Twitch\TwitchRoom.cs" />
+    <Compile Include="Chat\Twitch\TwitchMessageHandlers.cs" />
+    <Compile Include="Chat\Twitch\TwitchChannel.cs" />
     <Compile Include="Chat\Twitch\TwitchMessage.cs" />
     <Compile Include="Chat\Twitch\TwitchUser.cs" />
     <Compile Include="Chat\Twitch\TwitchWebSocketClient.cs" />
@@ -185,6 +187,7 @@
     <Compile Include="Globals.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TwitchAPI.cs" />
     <Compile Include="Utilities\ObjectPool.cs" />
     <Compile Include="Utilities\ReflectionUtil.cs" />
     <Compile Include="Utilities\SimpleJSON.cs" />

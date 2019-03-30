@@ -107,7 +107,7 @@ namespace StreamCore.Chat
         private static void ParseRoomstateTag(Match t, string channel)
         {
             if (!TwitchWebSocketClient.ChannelInfo.ContainsKey(channel))
-                TwitchWebSocketClient.ChannelInfo.Add(channel, new TwitchRoom(channel));
+                TwitchWebSocketClient.ChannelInfo.Add(channel, new TwitchChannel(channel));
 
             switch (t.Groups["Tag"].Value)
             {
@@ -189,7 +189,7 @@ namespace StreamCore.Chat
         private static void JOIN_Handler(TwitchMessage twitchMsg)
         {
             if (!TwitchWebSocketClient.ChannelInfo.ContainsKey(twitchMsg.channelName))
-                TwitchWebSocketClient.ChannelInfo.Add(twitchMsg.channelName, new TwitchRoom(twitchMsg.channelName));
+                TwitchWebSocketClient.ChannelInfo.Add(twitchMsg.channelName, new TwitchChannel(twitchMsg.channelName));
 
             Plugin.Log($"Success joining channel #{twitchMsg.channelName} (RoomID: {twitchMsg.roomId})");
             SafeInvoke(JOIN, twitchMsg);
@@ -198,7 +198,11 @@ namespace StreamCore.Chat
         private static void ROOMSTATE_Handler(TwitchMessage twitchMsg)
         {
             foreach (Match t in twitchMsg.tags)
-                ParseRoomstateTag(t, twitchMsg.channelName);
+            ParseRoomstateTag(t, twitchMsg.channelName);
+
+            var channel = TwitchWebSocketClient.ChannelInfo[twitchMsg.channelName];
+            if (channel.rooms == null)
+                TwitchAPI.GetRoomsForChannel(channel);
 
             SafeInvoke(ROOMSTATE, twitchMsg);
         }

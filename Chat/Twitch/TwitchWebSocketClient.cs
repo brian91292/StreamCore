@@ -18,8 +18,8 @@ namespace StreamCore.Chat
     /// </summary>
     public class TwitchWebSocketClient
     {
-        private static readonly Regex _twitchMessageRegex = new Regex(@"(@(?<Tags>[\S@\/;\-=,#]+) )?(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_]+))?( :(?<Message>.*))?", RegexOptions.Compiled);
-        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[a-z,0-9,-]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled);
+        private static readonly Regex _twitchMessageRegex = new Regex(@"(@(?<Tags>[\S@\/;\-=,#]+) )?(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_:-]+))?( :(?<Message>.*))?", RegexOptions.Compiled);
+        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[^@^;^=]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled);
 
         private static Random _rand = new Random();
         private static WebSocket _ws;
@@ -47,7 +47,7 @@ namespace StreamCore.Chat
         /// <summary>
         /// A dictionary of channel information for every channel we've joined during this session, the key is the channel name.
         /// </summary>
-        public static Dictionary<string, TwitchRoom> ChannelInfo { get; private set; } = new Dictionary<string, TwitchRoom>();
+        public static Dictionary<string, TwitchChannel> ChannelInfo { get; private set; } = new Dictionary<string, TwitchChannel>();
 
         /// <summary>
         /// A reference to the currently logged in Twitch user, will say **Invalid Twitch User** if the user is not logged in.
@@ -405,7 +405,7 @@ namespace StreamCore.Chat
         /// <summary>
         /// Joins the specified Twitch channel.
         /// </summary>
-        /// <param name="channel">The Twitch channel name to join (lowercase, no spaces).</param>
+        /// <param name="channel">The Twitch channel name to join.</param>
         public static void JoinChannel(string channel)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
@@ -413,9 +413,9 @@ namespace StreamCore.Chat
         }
 
         /// <summary>
-        /// Parts from the specified Twitch channel.
+        /// Exits the specified Twitch channel.
         /// </summary>
-        /// <param name="channel">The Twitch channel name to part (lowercase, no spaces).</param>
+        /// <param name="channel">The Twitch channel name to part from.</param>
         public static void PartChannel(string channel)
         {
             if (channel == TwitchLoginConfig.Instance.TwitchChannelName)
@@ -427,10 +427,32 @@ namespace StreamCore.Chat
                 SendRawMessage($"PART #{channel}");
         }
 
+        /// <summary>
+        /// Joins the specified TwitchRoom.
+        /// </summary>
+        /// <param name="room">The TwitchRoom to join.</param>
+        public static void JoinRoom(TwitchRoom room)
+        {
+            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
+                SendRawMessage($"JOIN #chatrooms:{room.ownerId}:{room.id}");
+        }
+
+        /// <summary>
+        /// Exits the specified TwitchRoom.
+        /// </summary>
+        /// <param name="room">The TwitchRoom to part from.</param>
+        public static void PartRoom(TwitchRoom room)
+        {
+            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
+                SendRawMessage($"PART #chatrooms:{room.ownerId}:{room.id}");
+        }
+
         private static void OnMessageReceived(string rawMessage, bool isSendCallback = false)
         {
             try
             {
+                Plugin.Log($"RawMsg: {rawMessage}");
+
                 var messageType = _twitchMessageRegex.Match(rawMessage);
                 if (messageType.Length == 0)
                 {
@@ -460,10 +482,7 @@ namespace StreamCore.Chat
                 if (isSendCallback)
                 {
                     twitchMsg.user = OurTwitchUser;
-                    twitchMsg.roomId = ChannelInfo.ContainsKey(TwitchLoginConfig.Instance.TwitchChannelName) ? ChannelInfo[TwitchLoginConfig.Instance.TwitchChannelName].roomId : string.Empty;
-                    twitchMsg.channelName = TwitchLoginConfig.Instance.TwitchChannelName;
                     twitchMsg.hostString = OurTwitchUser.displayName;
-                    Plugin.Log("Invoking received callback for send!");
                 }
 
                 // If the login fails, disconnect the websocket
