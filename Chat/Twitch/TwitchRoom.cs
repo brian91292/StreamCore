@@ -15,11 +15,11 @@ namespace StreamCore.Chat
         public string topic;
         public string minimumAllowedRole;
         public bool isPreviewable;
-        public string channelId
+        public string channelName
         {
             get
             {
-                return $"chatrooms:{ownerId}:{channelId}";
+                return $"chatrooms:{ownerId}:{id}";
             }
         }
 
