@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -13,41 +14,92 @@ namespace StreamCore.Chat
     /// </summary>
     public class TwitchMessageHandlers
     {
+        #region Message Handler Dictionaries
+        private static Dictionary<string, Action<TwitchMessage>> _PRIVMSG_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _ROOMSTATE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _USERNOTICE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _USERSTATE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _CLEARCHAT_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _CLEARMSG_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _MODE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage>> _JOIN_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        #endregion
+
         /// <summary>
-        /// Twitch PRIVMSG event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch PRIVMSG event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> PRIVMSG;
+        public static Action<TwitchMessage> PRIVMSG
+        {
+            set { lock(_PRIVMSG_CALLBACKS) {  _PRIVMSG_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _PRIVMSG_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch ROOMSTATE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch ROOMSTATE event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> ROOMSTATE;
+        public static Action<TwitchMessage> ROOMSTATE
+        {
+            set { lock (_ROOMSTATE_CALLBACKS) { _ROOMSTATE_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _ROOMSTATE_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch USERNOTICE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch USERNOTICE event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> USERNOTICE;
+        public static Action<TwitchMessage> USERNOTICE
+        {
+            set { lock (_USERNOTICE_CALLBACKS) { _USERNOTICE_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _USERNOTICE_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch USERSTATE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch USERSTATE event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> USERSTATE;
+        public static Action<TwitchMessage> USERSTATE
+        {
+            set { lock (_USERSTATE_CALLBACKS) { _USERSTATE_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _USERSTATE_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch CLEARCHAT event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch CLEARCHAT event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> CLEARCHAT;
+        public static Action<TwitchMessage> CLEARCHAT
+        {
+            set { lock (_CLEARCHAT_CALLBACKS) { _CLEARCHAT_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _CLEARCHAT_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch CLEARMSG event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch CLEARMSG event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> CLEARMSG;
+        public static Action<TwitchMessage> CLEARMSG
+        {
+            set { lock (_CLEARMSG_CALLBACKS) { _CLEARMSG_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _CLEARMSG_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch MODE event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch MODE event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> MODE;
+        public static Action<TwitchMessage> MODE
+        {
+            set { lock (_MODE_CALLBACKS) { _MODE_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _MODE_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
         /// <summary>
-        /// Twitch JOIN event handler. *NOT THREAD SAFE, USE CAUTION!*
+        /// Twitch JOIN event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> JOIN;
+        public static Action<TwitchMessage> JOIN
+        {
+            set { lock (_JOIN_CALLBACKS) { _JOIN_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _JOIN_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
 
         private static bool Initialized = false;
-        private static Dictionary<string, Action<TwitchMessage>> _messageHandlers = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage, string>> _messageHandlers = new Dictionary<string, Action<TwitchMessage, string>>();
 
         /// <summary>
         /// Initializes the internal message handler system. There is no need to call this function; it's called internally.
@@ -72,34 +124,44 @@ namespace StreamCore.Chat
         }
 
         /// <summary>
-        /// Invokes the proper message handler associated with the provided twitch message, assuming it exists.
+        /// Invokes the proper message handler associated with the provided twitch message, assuming it exists. 
         /// </summary>
         /// <param name="twitchMsg">The twitch message to invoke the message handler for.</param>
+        /// <param name="assemblyHash">The hash associated with the invoking assembly.</param>
         /// <returns></returns>
-        public static bool InvokeHandler(TwitchMessage twitchMsg)
+        public static bool InvokeHandler(TwitchMessage twitchMsg, string assemblyHash)
         {
             // Call the appropriate handler for this messageType
-            if (_messageHandlers.ContainsKey(twitchMsg.messageType))
+            if (_messageHandlers.TryGetValue(twitchMsg.messageType, out var handler))
             {
-                _messageHandlers[twitchMsg.messageType]?.Invoke(twitchMsg);
+                handler?.Invoke(twitchMsg, assemblyHash);
                 return true;
             }
             return false;
         }
 
-        private static void SafeInvoke(Action<TwitchMessage> action, TwitchMessage message)
+        private static void SafeInvoke(Dictionary<string, Action<TwitchMessage>> dict, TwitchMessage message, string invokerHash)
         {
-            if (action == null) return;
-
-            foreach(var a in action.GetInvocationList())
+            foreach (var instance in dict)
             {
-                try
+                string assemblyHash = instance.Key;
+                // Don't invoke the callback if it was registered by the assembly that sent the message which invoked this callback (no more vindaloop :D)
+                if (assemblyHash == invokerHash)
+                    continue;
+
+                var action = instance.Value;
+                if (action == null) return;
+
+                foreach (var a in action.GetInvocationList())
                 {
-                    a?.DynamicInvoke(message);
-                }
-                catch(Exception ex)
-                {
-                    Plugin.Log(ex.ToString());
+                    try
+                    {
+                        a?.DynamicInvoke(message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log(ex.ToString());
+                    }
                 }
             }
         }
@@ -176,26 +238,26 @@ namespace StreamCore.Chat
             }
         }
 
-        private static void PRIVMSG_Handler(TwitchMessage twitchMsg)
+        private static void PRIVMSG_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
             twitchMsg.user.username = twitchMsg.hostString.Split('!')[0];
             twitchMsg.user.displayName = twitchMsg.user.username;
             foreach (Match t in twitchMsg.tags)
                 ParseMessageTag(t, ref twitchMsg);
             
-            SafeInvoke(PRIVMSG, twitchMsg);
+            SafeInvoke(_PRIVMSG_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void JOIN_Handler(TwitchMessage twitchMsg)
+        private static void JOIN_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
             if (!TwitchWebSocketClient.ChannelInfo.ContainsKey(twitchMsg.channelName))
                 TwitchWebSocketClient.ChannelInfo.Add(twitchMsg.channelName, new TwitchChannel(twitchMsg.channelName));
 
             Plugin.Log($"Success joining channel #{twitchMsg.channelName} (RoomID: {twitchMsg.roomId})");
-            SafeInvoke(JOIN, twitchMsg);
+            SafeInvoke(_JOIN_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void ROOMSTATE_Handler(TwitchMessage twitchMsg)
+        private static void ROOMSTATE_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
             foreach (Match t in twitchMsg.tags)
             ParseRoomstateTag(t, twitchMsg.channelName);
@@ -204,46 +266,46 @@ namespace StreamCore.Chat
             if (channel.rooms == null)
                 TwitchAPI.GetRoomsForChannelAsync(channel, null);
 
-            SafeInvoke(ROOMSTATE, twitchMsg);
+            SafeInvoke(_ROOMSTATE_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void USERNOTICE_Handler(TwitchMessage twitchMsg)
+        private static void USERNOTICE_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
             foreach (Match t in twitchMsg.tags)
                 ParseMessageTag(t, ref twitchMsg);
 
-            SafeInvoke(USERNOTICE, twitchMsg);
+            SafeInvoke(_USERNOTICE_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void USERSTATE_Handler(TwitchMessage twitchMsg)
+        private static void USERSTATE_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
             foreach (Match t in twitchMsg.tags)
                 ParseMessageTag(t, ref twitchMsg);
 
             TwitchWebSocketClient.OurTwitchUser = twitchMsg.user;
 
-            SafeInvoke(USERSTATE, twitchMsg);
+            SafeInvoke(_USERSTATE_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void CLEARCHAT_Handler(TwitchMessage twitchMsg)
+        private static void CLEARCHAT_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
-            SafeInvoke(CLEARCHAT, twitchMsg);
+            SafeInvoke(_CLEARCHAT_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void CLEARMSG_Handler(TwitchMessage twitchMsg)
+        private static void CLEARMSG_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
-            SafeInvoke(CLEARMSG, twitchMsg);
+            SafeInvoke(_CLEARMSG_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void MODE_Handler(TwitchMessage twitchMsg)
+        private static void MODE_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
             //Plugin.Log("MODE message received!");
-            SafeInvoke(MODE, twitchMsg);
+            SafeInvoke(_MODE_CALLBACKS, twitchMsg, invokerHash);
         }
 
-        private static void NOTICE_Handler(TwitchMessage twitchMsg)
+        private static void NOTICE_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
-            //SafeInvoke(NOTICE, twitchMsg);
+            //    SafeInvoke(NOTICE, twitchMsg, invokerHash);
         }
     }
 }

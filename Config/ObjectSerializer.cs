@@ -61,8 +61,8 @@ namespace StreamCore.Config
                     string value = parts[1];
 
                     var fieldInfo = obj.GetType().GetField(key);
-                    if (ConvertFromString.ContainsKey(fieldInfo.FieldType))
-                        fieldInfo.SetValue(obj, ConvertFromString[fieldInfo.FieldType].Invoke(parts[1]));
+                    if (ConvertFromString.TryGetValue(fieldInfo.FieldType, out var convertFromString))
+                        fieldInfo.SetValue(obj, convertFromString.Invoke(parts[1]));
                 }
             }
         }
@@ -75,8 +75,8 @@ namespace StreamCore.Config
             List<string> serializedClass = new List<string>();
             foreach (var field in obj.GetType().GetFields())
             {
-                if (ConvertToString.ContainsKey(field.FieldType))
-                    serializedClass.Add($"{field.Name}={ConvertToString[field.FieldType].Invoke(field, obj)}");
+                if (ConvertToString.TryGetValue(field.FieldType, out var convertToString))
+                    serializedClass.Add($"{field.Name}={convertToString.Invoke(field, obj)}");
             }
             if (path != string.Empty && serializedClass.Count > 0)
             {

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -77,28 +78,17 @@ namespace StreamCore.Chat
         /// <summary>
         /// True if the TwitchChannelName in TwitchLoginInfo.ini is valid, and we've joined the channel successfully.
         /// </summary>
-        public static bool IsChannelValid
-        {
-            get
-            {
-                return ChannelInfo.ContainsKey(TwitchLoginConfig.Instance.TwitchChannelName) && ChannelInfo[TwitchLoginConfig.Instance.TwitchChannelName].roomId != String.Empty;
-            }
-        }
+        public static bool IsChannelValid { get => ChannelInfo.TryGetValue(TwitchLoginConfig.Instance.TwitchChannelName, out var channelInfo) && channelInfo.roomId != String.Empty; }
 
         private static DateTime _sendLimitResetTime = DateTime.Now;
-        private static Queue<string> _sendQueue = new Queue<string>();
-        
         private static int _reconnectCooldown = 500;
         private static int _fullReconnects = -1;
         private static string _lastChannel = "";
 
         private static int _messagesSent = 0;
         private static int _sendResetInterval = 30;
-        private static int _messageLimit
-        {
-            get { return (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch
-        }
-
+        private static int _messageLimit { get => (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch 
+        private static ConcurrentQueue<string> _sendQueue = new ConcurrentQueue<string>();
         
         /// <summary>
         /// Call this function once OnApplicationStart if you intend to use the Twitch chat API
@@ -358,12 +348,16 @@ namespace StreamCore.Chat
 
                     if (_sendQueue.Count > 0)
                     {
-                        if (_messagesSent < _messageLimit)
+                        if (_messagesSent < _messageLimit && _sendQueue.TryDequeue(out var fullMsg))
                         {
-                            string msg = _sendQueue.Dequeue();
-                            Plugin.Log($"Sending message {msg}");
+                            // Split off the assembly hash, we'll use this in the callback we invoke to filter out calls to the assembly that created the callback.
+                            string[] parts= fullMsg.Split(new[] { '/' }, 2);
+                            string assembly = parts[0];
+                            string msg = parts[1];
+
+                            // Send the message, then invoke the received callback for all the other assemblies
                             _ws.Send(msg);
-                            OnMessageReceived(msg, true);
+                            OnMessageReceived(msg, assembly);
                             _messagesSent++;
                         }
                     }
@@ -373,14 +367,30 @@ namespace StreamCore.Chat
             Plugin.Log("Exiting!");
         }
 
+        // Prepend the assembly hash code before adding it to the send queue, to be used in identifying the assembly for our callback
+        private static void SendRawInternal(Assembly assembly, string msg)
+        {
+            if (LoggedIn && _ws.ReadyState == WebSocketState.Open && msg.Length > 0)
+                _sendQueue.Enqueue($"{assembly.GetHashCode()}/{msg}");
+        }
+
+        /// <summary>
+        /// Prepends a non-breaking zero-width space to the beginning of the message (\uFEFF).
+        /// </summary>
+        /// <param name="msg">The message to prepend the escape character to.</param>
+        /// <returns>The escaped message.</returns>
+        private static string Escape(string msg)
+        {
+            return $"\uFEFF{msg}";
+        }
+ 
         /// <summary>
         /// Sends a raw message to the Twitch server.
         /// </summary>
         /// <param name="msg">The raw message to be sent.</param>
         public static void SendRawMessage(string msg)
         {
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                _sendQueue.Enqueue(msg);
+            SendRawInternal(Assembly.GetCallingAssembly(), msg);
         }
 
         /// <summary>
@@ -389,7 +399,7 @@ namespace StreamCore.Chat
         /// <param name="msg">The chat message to be sent.</param>
         public static void SendMessage(string msg)
         {
-            SendMessage(msg, TwitchLoginConfig.Instance.TwitchChannelName);
+            SendRawInternal(Assembly.GetCallingAssembly(), $"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} :{Escape(msg)}");
         }
 
         /// <summary>
@@ -399,7 +409,7 @@ namespace StreamCore.Chat
         /// <param name="channelId">The channel to send the message to.</param>
         public static void SendMessage(string msg, string channelId)
         {
-            SendCommand($"\uFEFF{msg}", channelId);
+            SendRawInternal(Assembly.GetCallingAssembly(), $"PRIVMSG #{channelId} :{Escape(msg)}");
         }
 
         /// <summary>
@@ -408,7 +418,7 @@ namespace StreamCore.Chat
         /// <param name="command">The chat command to be sent.</param>
         public static void SendCommand(string command)
         {
-            SendCommand(command, TwitchLoginConfig.Instance.TwitchChannelName);
+            SendRawInternal(Assembly.GetCallingAssembly(), $"PRIVMSG #{TwitchLoginConfig.Instance.TwitchChannelName} :{command}");
         }
 
         /// <summary>
@@ -418,11 +428,7 @@ namespace StreamCore.Chat
         /// <param name="channelId">The channel to send the command to.</param>
         public static void SendCommand(string command, string channelId)
         {
-            if (channelId == string.Empty)
-                channelId = TwitchLoginConfig.Instance.TwitchChannelName;
-
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open && command.Length > 0)
-                _sendQueue.Enqueue($"PRIVMSG #{channelId} :{command}");
+            SendRawInternal(Assembly.GetCallingAssembly(), $"PRIVMSG #{channelId} :{command}");
         }
 
         /// <summary>
@@ -431,12 +437,11 @@ namespace StreamCore.Chat
         /// <param name="channelId">The Twitch channel name to join.</param>
         public static void JoinChannel(string channelId)
         {
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                SendRawMessage($"JOIN #{channelId}");
+            SendRawInternal(Assembly.GetCallingAssembly(), $"JOIN #{channelId}");
         }
 
         /// <summary>
-        /// Exits the specified Twitch channel.
+        /// Exits the specified Twitch channel. *NOTE* You cannot part from the channel defined in TwitchLoginConfig.ini!
         /// </summary>
         /// <param name="channelId">The Twitch channel name to part from.</param>
         public static void PartChannel(string channelId)
@@ -445,12 +450,10 @@ namespace StreamCore.Chat
             {
                 throw new Exception("Cannot part from the channel defined in TwitchLoginConfig.ini.");
             }
-
-            if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
-                SendRawMessage($"PART #{channelId}");
+            SendRawInternal(Assembly.GetCallingAssembly(), $"PART #{channelId}");
         }
         
-        private static void OnMessageReceived(string rawMessage, bool isSendCallback = false)
+        private static void OnMessageReceived(string rawMessage, string assemblyHash = "")
         {
             try
             {
@@ -480,10 +483,11 @@ namespace StreamCore.Chat
                     twitchMsg.channelName = messageType.Groups["ChannelName"].Value;
 
                 // If this is a callback from the send function, populate it with our twitch users info/the current room info
-                if (isSendCallback)
+                if (assemblyHash != string.Empty)
                 {
                     twitchMsg.user = OurTwitchUser;
                     twitchMsg.hostString = OurTwitchUser.displayName;
+                    Plugin.Log($"Assembly hash is {assemblyHash}");
                 }
 
                 // If the login fails, disconnect the websocket
@@ -495,7 +499,7 @@ namespace StreamCore.Chat
                         _ws.Close();
                     }
                 }
-                TwitchMessageHandlers.InvokeHandler(twitchMsg);
+                TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
             }
             catch (Exception ex)
             {
