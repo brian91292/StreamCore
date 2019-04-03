@@ -181,9 +181,9 @@ namespace StreamCore.Utils
             return false;
         }
 
-        public static string StripHTML(string input)
+        public static string EscapeHTML(string input)
         {
-            return _stripHtmlRegex.Replace(input, m => m.Value.Replace("<", "<\uFEFF"));
+            return _stripHtmlRegex.Replace(input, m => m.Value.Insert(1, "\uFEFF"));
         }
 
         public static Texture2D LoadTextureRaw(byte[] file)
