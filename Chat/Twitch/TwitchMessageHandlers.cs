@@ -202,7 +202,7 @@ namespace StreamCore.Chat
 
             var channel = TwitchWebSocketClient.ChannelInfo[twitchMsg.channelName];
             if (channel.rooms == null)
-                TwitchAPI.GetRoomsForChannel(channel);
+                TwitchAPI.GetRoomsForChannelAsync(channel, null);
 
             SafeInvoke(ROOMSTATE, twitchMsg);
         }

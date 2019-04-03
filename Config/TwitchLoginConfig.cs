@@ -49,10 +49,7 @@ namespace StreamCore.Config
             if (!Directory.Exists(Path.GetDirectoryName(FilePath)))
                 Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
 
-            if (File.Exists(FilePath))
-            {
-                Load();
-            }
+            Load();
             CorrectConfigSettings();
             Save();
 
@@ -73,9 +70,7 @@ namespace StreamCore.Config
         public void Load()
         {
             if(File.Exists(FilePath))
-                ConfigSerializer.LoadConfig(this, FilePath);
-            else
-                ImportAsyncTwitchConfig();
+                ObjectSerializer.Load(this, FilePath);
 
             CorrectConfigSettings();
         }
@@ -84,32 +79,7 @@ namespace StreamCore.Config
         {
             if (!callback)
                 _saving = true;
-            ConfigSerializer.SaveConfig(this, FilePath);
-        }
-
-        private void ImportAsyncTwitchConfig()
-        {
-            try
-            {
-                string asyncTwitchConfig = Path.Combine(Environment.CurrentDirectory, "UserData", "AsyncTwitchConfig.json");
-                if (File.Exists(asyncTwitchConfig))
-                {
-                    JSONNode node = JSON.Parse(File.ReadAllText(asyncTwitchConfig));
-                    if (!node.IsNull)
-                    {
-                        if (node["Username"].IsString && TwitchUsername == String.Empty)
-                            TwitchUsername = node["Username"].Value;
-                        if (node["ChannelName"].IsString && TwitchChannelName == String.Empty)
-                            TwitchChannelName = node["ChannelName"].Value;
-                        if (node["OauthKey"].IsString && TwitchOAuthToken == String.Empty)
-                            TwitchOAuthToken = node["OauthKey"].Value;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log($"Error when trying to parse AsyncTwitchConfig! {e}");
-            }
+            ObjectSerializer.Save(this, FilePath);
         }
 
         private void CorrectConfigSettings()

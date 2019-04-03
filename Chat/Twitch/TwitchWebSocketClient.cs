@@ -454,8 +454,6 @@ namespace StreamCore.Chat
         {
             try
             {
-                Plugin.Log($"RawMsg: {rawMessage}");
-
                 var messageType = _twitchMessageRegex.Match(rawMessage);
                 if (messageType.Length == 0)
                 {

@@ -35,12 +35,6 @@
     <DocumentationFile>bin\Release\StreamCore.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="BeatSaberCustomUI">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Plugins\BeatSaberCustomUI.dll</HintPath>
-    </Reference>
     <Reference Include="IllusionInjector">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\IllusionInjector.dll</HintPath>
     </Reference>
@@ -183,6 +177,7 @@
     <Compile Include="Chat\websocket-sharp\WebSocketException.cs" />
     <Compile Include="Chat\websocket-sharp\WebSocketFrame.cs" />
     <Compile Include="Chat\websocket-sharp\WebSocketState.cs" />
+    <Compile Include="Config\ObjectSerializer.cs" />
     <Compile Include="Config\TwitchLoginConfig.cs" />
     <Compile Include="Globals.cs" />
     <Compile Include="Plugin.cs" />
