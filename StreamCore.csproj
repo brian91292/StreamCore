@@ -92,6 +92,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Changelog.md" />
     <Compile Include="Chat\ChatMessageBase.cs" />
     <Compile Include="Chat\ChatUserBase.cs" />
     <Compile Include="Chat\Twitch\TwitchRoom.cs" />
