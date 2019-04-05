@@ -313,7 +313,7 @@ namespace StreamCore.Chat
 
                         if (!isManualReconnect)
                         {
-                            Thread.Sleep(Math.Max(_reconnectCooldown *= 2, 120000));
+                            Thread.Sleep(Math.Min(_reconnectCooldown *= 2, 120000));
                             Connect();
                         }
                     });
@@ -329,7 +329,7 @@ namespace StreamCore.Chat
             {
                 Plugin.Log(ex.ToString());
                 // Try to reconnect for any exception in the websocket client other than a ThreadAbortException
-                Thread.Sleep(Math.Max(_reconnectCooldown *= 2, 120000));
+                Thread.Sleep(Math.Min(_reconnectCooldown *= 2, 120000));
                 Connect();
             }
         }
