@@ -482,6 +482,10 @@ namespace StreamCore.Chat
                 if (messageType.Groups["ChannelName"].Success)
                     twitchMsg.channelName = messageType.Groups["ChannelName"].Value;
 
+                // Skip any command messages, as if we're encountering one it came from the StreamCore client and would never be received by other clients (since it's a command)
+                if (twitchMsg.message.StartsWith("/"))
+                    return;
+
                 // If this is a callback from the send function, populate it with our twitch users info/the current room info
                 if (assemblyHash != string.Empty)
                 {
@@ -513,7 +517,7 @@ namespace StreamCore.Chat
             {
                 if (!ev.IsText) return;
                 
-                //Plugin.Log($"RawMsg: {ev.Data}");
+                Plugin.Log($"RawMsg: {ev.Data}");
                 string rawMessage = ev.Data.TrimEnd();
                 if (rawMessage.StartsWith("PING"))
                 {
