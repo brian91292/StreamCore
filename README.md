@@ -20,10 +20,13 @@ Initialize StreamCore in `OnApplicationStart`
 
 *It's important that you base your client around calling `Initialize` in `OnApplicationStart`, to ensure you don't miss any callbacks if any other plugins call `Initialize` in `OnApplicationStart`.*
 
-For now, since only Twitch is supported, the only thing to initialize is `TwitchWebSocketClient`.
+Make sure to include `StreamCore.Chat`:
 ```cs
 using StreamCore.Chat;
+```
 
+Then call `Initialize` for the chat service you want to initialize. For now, since only Twitch is supported, we'll just initialize `TwitchWebSocketClient`.
+```cs
 TwitchWebSocketClient.Initialize();
 ```
 
