@@ -11,7 +11,8 @@ Config files can be found in the `UserData\StreamCore` folder.
 | **TwitchUsername** | Your twitch username for the account you want to send messages as in chat (only matters if you're using the request bot) |
 | **TwitchOAuthToken** | The oauth token corresponding to the TwitchUsername entered above ([Click here to generate an oauth token](https://twitchapps.com/tmi/))  |
 
-# Basic Usage
+
+# Basic Implementation (for devs)
 Implementing StreamCore into your plugin is very simple, and can be accomplished in just a few steps.
 
 ### Step 1
