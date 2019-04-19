@@ -34,7 +34,7 @@ public void OnApplicationStart()
 ```
 
 ### Step 2
-Subscribe to any callbacks you want to receive. 
+Subscribe to any callbacks you want to receive. You probably want to do this in `OnApplicationStart` as well.
 
 *This can be time sensitive for callbacks such as `TwitchWebSocketClient.OnConnected`, as if you don't subscribe in time you might miss the callback. StreamCore will delay the connection after calling `Initialize` for 1 second, which should allow all plugins that utilize StreamCore to subscribe to this event in time.*
 
