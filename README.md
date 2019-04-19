@@ -27,7 +27,10 @@ using StreamCore.Chat;
 
 Then call `Initialize` for the chat service you want to initialize. For now, since only Twitch is supported, we'll just initialize `TwitchWebSocketClient`.
 ```cs
-TwitchWebSocketClient.Initialize();
+public void OnApplicationStart()
+{
+  TwitchWebSocketClient.Initialize();
+}
 ```
 
 ### Step 2
