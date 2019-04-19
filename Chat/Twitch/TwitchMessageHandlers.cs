@@ -216,6 +216,7 @@ namespace StreamCore.Chat
                     twitchMsg.user.isSub = twitchMsg.user.badges.Contains("subscriber/");
                     twitchMsg.user.isTurbo = twitchMsg.user.badges.Contains("turbo/");
                     twitchMsg.user.isMod = twitchMsg.user.badges.Contains("moderator/");
+                    twitchMsg.user.isVip = twitchMsg.user.badges.Contains("vip/");
                     break;
                 case "color":
                     twitchMsg.user.color = t.Groups["Value"].Value;

@@ -23,11 +23,11 @@ namespace StreamCore
         private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
 
         public static void Log(string text,
-                        [CallerFilePath] string file = "",
-                        [CallerMemberName] string member = "",
-                        [CallerLineNumber] int line = 0)
+                [CallerFilePath] string file = "",
+                [CallerMemberName] string member = "",
+                [CallerLineNumber] int line = 0)
         {
-            Console.WriteLine($"[{ModuleName}] {DateTime.UtcNow} {Path.GetFileName(file)}->{member}({line}): {text}");
+            Console.WriteLine($"{ModuleName}::{Path.GetFileName(file)}->{member}({line}): {text}");
         }
 
         //private IEnumerator DelayedStartup()
