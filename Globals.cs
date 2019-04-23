@@ -15,7 +15,7 @@ namespace StreamCore
         /// <summary>
         /// The StreamCore data path.
         /// </summary>
-        public static readonly string DataPath = Path.Combine(Environment.CurrentDirectory, "UserData", Plugin.ModuleName);
+        public static readonly string DataPath = Path.Combine(Environment.CurrentDirectory, "UserData", Plugin.ModuleName.Replace(" ", ""));
 
         /// <summary>
         /// This value will be true when the application is exiting.
