@@ -13,10 +13,10 @@ namespace StreamCore
 {
     public class Plugin : IPlugin
     {
-        public static readonly string ModuleName = "StreamCore";
+        public static readonly string ModuleName = "Stream Core";
 
         public string Name => ModuleName;
-        public string Version => "1.0.3";
+        public string Version => "1.0.4";
 
         public static Plugin Instance { get; private set; }
         
