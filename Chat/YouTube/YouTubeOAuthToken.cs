@@ -37,7 +37,7 @@ namespace StreamCore.YouTube
             Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}");
         }
 
-        internal static async void Exchange(string code)
+        internal static bool Exchange(string code)
         {
             try
             {
@@ -47,14 +47,8 @@ namespace StreamCore.YouTube
                 HttpWebResponse resp = (HttpWebResponse)web.GetResponse();
                 if (resp.StatusCode != HttpStatusCode.OK)
                 {
-                    // Read our token into a string
-                    Stream ds = resp.GetResponseStream();
-                    StreamReader r = new StreamReader(ds);
-                    string t = r.ReadToEnd();
-                    r.Close();
-
-                    Plugin.Log($"Error: {resp.StatusCode}, Resp: {t}");
-                    return;
+                    Plugin.Log($"Error: {resp.StatusCode}");
+                    return false;
                 }
 
 
@@ -67,12 +61,13 @@ namespace StreamCore.YouTube
                 reader.Close();
                 resp.Close();
 
+                return true;
             }
             catch (WebException ex)
             {
                 Plugin.Log($"Error: {ex.ToString()}");
             }
-
+            return false;
         }
 
         internal static bool Refresh(bool forceRefresh = false)

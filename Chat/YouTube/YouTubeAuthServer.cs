@@ -72,21 +72,30 @@ namespace StreamCore.YouTube
 
             if(url == "/callback")
             {
-                Plugin.Log("Callback!");
                 response.StatusCode = 307;
-                response.Redirect("https://brian91292.dev/youtube/success");
-                //response.WriteContent(Encoding.UTF8.GetBytes($"Query: {query}"));
 
                 string code = "";
+                // Find the code param
                 foreach (string param in query.Split(new char[] { '&' }))
                 {
                     if (param.StartsWith("code="))
                         code = param.Split(new char[] { '=' })[1];
                 }
 
-                //Plugin.Log($"Code: {code}");
-                YouTubeOAuthToken.Exchange(code);
-                YouTubeConnection.RequestLiveBroadcastInfo();
+                // If we successfully exchange our code for an auth token, request a listing of live broadcast info
+                if (YouTubeOAuthToken.Exchange(code))
+                {
+                    // Redirect to our success page
+                    response.Redirect("https://brian91292.dev/youtube/?success");
+                    YouTubeConnection.RequestLiveBroadcastInfo();
+                }
+                else
+                    // Redirect to our error page
+                    response.Redirect("https://brian91292.dev/youtube/?error");
+
+                // Close the response then stop the server
+                response.Close();
+                StopServer();
 
                 return;
             }
