@@ -101,10 +101,7 @@ namespace StreamCore.Chat
         private static bool Initialized = false;
         private static Dictionary<string, Action<TwitchMessage, string>> _messageHandlers = new Dictionary<string, Action<TwitchMessage, string>>();
 
-        /// <summary>
-        /// Initializes the internal message handler system. There is no need to call this function; it's called internally.
-        /// </summary>
-        public static void Initialize()
+        internal static void Initialize()
         {
             if (Initialized)
                 return;
@@ -123,13 +120,7 @@ namespace StreamCore.Chat
             Initialized = true;
         }
 
-        /// <summary>
-        /// Invokes the proper message handler associated with the provided twitch message, assuming it exists. 
-        /// </summary>
-        /// <param name="twitchMsg">The twitch message to invoke the message handler for.</param>
-        /// <param name="assemblyHash">The hash associated with the invoking assembly.</param>
-        /// <returns></returns>
-        public static bool InvokeHandler(TwitchMessage twitchMsg, string assemblyHash)
+        internal static bool InvokeHandler(TwitchMessage twitchMsg, string assemblyHash)
         {
             // Call the appropriate handler for this messageType
             if (_messageHandlers.TryGetValue(twitchMsg.messageType, out var handler))
