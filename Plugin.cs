@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using StreamCore.YouTube;
 
 namespace StreamCore
 {
@@ -30,13 +31,6 @@ namespace StreamCore
             Console.WriteLine($"{ModuleName}::{Path.GetFileName(file)}->{member}({line}): {text}");
         }
 
-        //private IEnumerator DelayedStartup()
-        //{
-        //    yield return new WaitUntil(() => SceneManager.GetActiveScene().name == "MenuCore");
-        //    if (TwitchLoginConfig.Instance.TwitchChannelName == String.Empty)
-        //        yield return new WaitUntil(() => BeatSaberUI.DisplayKeyboard("Enter Your Twitch Channel Name!", String.Empty, null, (channelName) => { TwitchLoginConfig.Instance.TwitchChannelName = channelName; TwitchLoginConfig.Instance.Save(true); }));
-        //}
-
         public void OnApplicationStart()
         {
             if (Instance != null) return;
@@ -44,10 +38,6 @@ namespace StreamCore
 
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;
-
-            //Log($"Username: {TwitchLoginConfig.TwitchUsername}, Oauth: {TwitchLoginConfig.TwitchOAuthToken.Substring(0, 10)}, Channel: {TwitchLoginConfig.TwitchChannelName}");
-            
-            //SharedCoroutineStarter.instance.StartCoroutine(DelayedStartup());
         }
 
         private void SceneManager_activeSceneChanged(Scene from, Scene to)

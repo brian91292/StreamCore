@@ -254,7 +254,7 @@ namespace StreamCore.Chat
             if (!TwitchWebSocketClient.ChannelInfo.ContainsKey(twitchMsg.channelName))
                 TwitchWebSocketClient.ChannelInfo.Add(twitchMsg.channelName, new TwitchChannel(twitchMsg.channelName));
 
-            Plugin.Log($"Success joining channel #{twitchMsg.channelName} (RoomID: {twitchMsg.roomId})");
+            Plugin.Log($"Success joining channel #{twitchMsg.channelName}");
             SafeInvoke(_JOIN_CALLBACKS, twitchMsg, invokerHash);
         }
 

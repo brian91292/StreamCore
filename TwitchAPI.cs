@@ -14,7 +14,7 @@ namespace StreamCore
     public class TwitchAPI
     {
         // My twitch client id, get your own (╯°□°)╯︵ ┻━┻
-        private static readonly string ClientId = "jg6ij5z8mf8jr8si22i5uq8tobnmde";
+        internal static readonly string ClientId = "jg6ij5z8mf8jr8si22i5uq8tobnmde";
 
 
         public static void GetRoomsForChannelAsync(TwitchChannel channel, Action<bool, TwitchChannel> onCompleted)
