@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Net.NetworkInformation;
+using StreamCore.Utilities;
 
 namespace StreamCore.YouTube
 {
@@ -36,7 +37,7 @@ namespace StreamCore.YouTube
             YouTubeAuthServer.RunServer();
             Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}");
         }
-
+        
         internal static bool Exchange(string code)
         {
             try
@@ -50,9 +51,8 @@ namespace StreamCore.YouTube
                     Plugin.Log($"Error: {resp.StatusCode}");
                     return false;
                 }
-
-
-                // Read our token into a string
+                
+                // Update our token we got from the exchange
                 Stream dataStream = resp.GetResponseStream();
                 StreamReader reader = new StreamReader(dataStream);
                 string token = reader.ReadToEnd();
@@ -110,6 +110,9 @@ namespace StreamCore.YouTube
                     Plugin.Log("Refresh token was invalid! Failed to refresh access token!");
                     return false;
                 }
+
+                // Setup another event to be triggered a minute before our new token expires
+                TaskHelper.ScheduleUniqueActionAtTime("YouTubeOAuthRefresh", () => Refresh(), expireTime.Subtract(new TimeSpan(0, 1, 0)));
 
                 Plugin.Log("Success refreshing auth token!");
                 return true;

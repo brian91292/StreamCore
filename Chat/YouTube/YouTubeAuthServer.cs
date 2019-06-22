@@ -87,7 +87,7 @@ namespace StreamCore.YouTube
                 {
                     // Redirect to our success page
                     response.Redirect("https://brian91292.dev/youtube/?success");
-                    YouTubeConnection.RequestLiveBroadcastInfo();
+                    YouTubeConnection.StartServiceMonitors();
                 }
                 else
                     // Redirect to our error page
