@@ -27,8 +27,15 @@ namespace StreamCore.Utilities
             if (!cancellationTokens.TryGetValue(identifier, out var cancellationToken)) return;
 
             // Invoke the cancellation token, if it exists
-            cancellationToken?.Cancel();
-            Plugin.Log($"Cancelling task with identifier {identifier}.");
+            try
+            {
+                cancellationToken?.Cancel();
+                Plugin.Log($"Cancelled task with identifier {identifier}.");
+            }
+            catch(Exception ex)
+            {
+                Plugin.Log($"Error when trying to cancel task {identifier}, {ex.ToString()}");
+            }
         }
 
         /// <summary>
