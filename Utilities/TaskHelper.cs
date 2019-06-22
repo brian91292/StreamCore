@@ -1,6 +1,9 @@
-﻿using System;
+﻿using StreamCore.YouTube;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +12,7 @@ namespace StreamCore.Utilities
 {
     public class TaskHelper
     {
-        private static Dictionary<string, CancellationTokenSource> _cancellationTokens = new Dictionary<string, CancellationTokenSource>();
+        private static ConcurrentDictionary<Assembly, ConcurrentDictionary<string, CancellationTokenSource>> _cancellationTokensForAssembly = new ConcurrentDictionary<Assembly, ConcurrentDictionary<string, CancellationTokenSource>>();
 
         /// <summary>
         /// Cancels a task based on the unique string identifier provided.
@@ -17,10 +20,34 @@ namespace StreamCore.Utilities
         /// <param name="identifier"></param>
         public static void CancelTask(string identifier)
         {
-            if (_cancellationTokens.TryGetValue(identifier, out var cancellationToken))
+            // Return if there are no cancellation tokens for the current assembly
+            if (!_cancellationTokensForAssembly.TryGetValue(Assembly.GetCallingAssembly(), out var cancellationTokens)) return;
+
+            // Return if no cancellation token with the given identifier exists
+            if (!cancellationTokens.TryGetValue(identifier, out var cancellationToken)) return;
+
+            // Invoke the cancellation token, if it exists
+            cancellationToken?.Cancel();
+            Plugin.Log($"Cancelling task with identifier {identifier}.");
+        }
+
+        /// <summary>
+        /// Cancel all tasks that are currently running
+        /// </summary>
+        public static void CancelAllTasks()
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            // Return if there are no cancellation tokens for the current assembly
+            if (!_cancellationTokensForAssembly.TryGetValue(assembly, out var cancellationTokens)) return;
+            
+            lock (_cancellationTokensForAssembly[assembly])
             {
-                cancellationToken?.Cancel();
-                Plugin.Log($"Cancelling task with identifier {identifier}.");
+                // Iterate through each cancellation token for our assembly 
+                foreach (CancellationTokenSource token in cancellationTokens.Values)
+                    token?.Cancel();
+
+                // Clear the list of cancellation tokens
+                _cancellationTokensForAssembly[assembly].Clear();
             }
         }
 
@@ -39,12 +66,13 @@ namespace StreamCore.Utilities
             {
                 try
                 {
-                    await Task.Delay(time - DateTime.UtcNow, newCancellationToken.Token);
+                    TimeSpan delayTime = time - DateTime.UtcNow;
+                    Plugin.Log($"Waiting for {delayTime.Minutes}m {delayTime.Seconds}s");
+                    await Task.Delay(delayTime, newCancellationToken.Token);
                     if(!newCancellationToken.IsCancellationRequested)
                         action?.Invoke();
                 }
                 catch (ThreadAbortException) { Plugin.Log("Thread aborting!"); }
-                Plugin.Log("Task completed!");
             }, newCancellationToken.Token);
         }
 
@@ -57,14 +85,15 @@ namespace StreamCore.Utilities
         /// <returns></returns>
         public static Task ScheduleUniqueActionAtTime(string identifier, Action action, DateTime time)
         {
-            if (_cancellationTokens.TryGetValue(identifier, out var oldCancellationToken))
-            {
-                Plugin.Log($"Cancelling old instance of {identifier}!");
-                oldCancellationToken?.Cancel();
-            }
+            // If any task already exists with this identifier, cancel it
+            CancelTask(identifier);
 
-            Task task = ScheduleActionAtTime(action, time, out var cancellationToken);
-            _cancellationTokens[identifier] = cancellationToken;
+            var assembly = Assembly.GetCallingAssembly();
+            if (!_cancellationTokensForAssembly.ContainsKey(assembly))
+                _cancellationTokensForAssembly[assembly] = new ConcurrentDictionary<string, CancellationTokenSource>();
+
+            Task task = ScheduleActionAtTime(action, time, out var newCancellationToken);
+            _cancellationTokensForAssembly[assembly][identifier] = newCancellationToken;
             return task;
         }
 
@@ -90,7 +119,6 @@ namespace StreamCore.Utilities
                     }
                 }
                 catch (ThreadAbortException) { Plugin.Log("Thread aborting!"); }
-                Plugin.Log("Task completed!");
             }, newCancellationToken.Token);
         }
 
@@ -103,14 +131,15 @@ namespace StreamCore.Utilities
         /// <returns>The task generated as a result of this function call.</returns>
         public static Task ScheduleUniqueRepeatingAction(string identifier, Action action, int delay)
         {
-            if (_cancellationTokens.TryGetValue(identifier, out var oldCancellationToken))
-            {
-                Plugin.Log($"Cancelling old instance of {identifier}!");
-                oldCancellationToken?.Cancel();
-            }
+            // If any task already exists with this identifier, cancel it
+            CancelTask(identifier);
+
+            var assembly = Assembly.GetCallingAssembly();
+            if (!_cancellationTokensForAssembly.ContainsKey(assembly))
+                _cancellationTokensForAssembly[assembly] = new ConcurrentDictionary<string, CancellationTokenSource>();
 
             Task task = ScheduleRepeatingAction(action, delay, out var newCancellationToken);
-            _cancellationTokens[identifier] = newCancellationToken;
+            _cancellationTokensForAssembly[assembly][identifier] = newCancellationToken;
             return task;
         }
     }

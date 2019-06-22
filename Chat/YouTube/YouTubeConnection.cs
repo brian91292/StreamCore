@@ -88,6 +88,8 @@ namespace StreamCore.YouTube
                             // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
                             if (!YouTubeOAuthToken.Refresh(true))
                             {
+                                TaskHelper.CancelAllTasks();
+
                                 // If we fail to refresh the auth token, the user probably unapproved our app; so we need to request approval again
                                 File.Delete(Path.Combine(Globals.DataPath, "YouTubeOAuthToken.json"));
                                 YouTubeOAuthToken.Generate();

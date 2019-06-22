@@ -48,7 +48,7 @@ namespace StreamCore.YouTube
                 HttpWebResponse resp = (HttpWebResponse)web.GetResponse();
                 if (resp.StatusCode != HttpStatusCode.OK)
                 {
-                    Plugin.Log($"Error: {resp.StatusCode}");
+                    Plugin.Log($"Error: {resp.StatusCode}, Status: {resp.StatusCode} ({resp.StatusDescription})");
                     return false;
                 }
                 
@@ -86,13 +86,7 @@ namespace StreamCore.YouTube
                 HttpWebResponse resp = (HttpWebResponse)web.GetResponse();
                 if (resp.StatusCode != HttpStatusCode.OK)
                 {
-                    // Read our token into a string
-                    Stream ds = resp.GetResponseStream();
-                    StreamReader r = new StreamReader(ds);
-                    string t = r.ReadToEnd();
-                    r.Close();
-
-                    Plugin.Log($"Error: {resp.StatusCode}, Resp: {t}");
+                    Plugin.Log($"Error: {resp.StatusCode}, Status: {resp.StatusCode} ({resp.StatusDescription})");
                     return false;
                 }
 
@@ -135,7 +129,7 @@ namespace StreamCore.YouTube
 
             // If an error key exists, it indicates that the user probably 
             // created a new auth token or revoked access to our app.
-            if (node.HasKey("error"))
+            if (node.HasKey("error") || !node.HasKey("access_token"))
             {
                 Plugin.Log(json);
                 return false;
