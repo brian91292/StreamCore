@@ -48,63 +48,21 @@ namespace StreamCore.YouTube
             }
 
             // Finally, request our live broadcast info if everything went well
-            StartServiceMonitors();
+            Start();
         }
         
-        internal static void StartServiceMonitors()
+        internal static void Start()
         {
             TaskHelper.ScheduleUniqueActionAtTime("YouTubeOAuthRefresh", () => YouTubeOAuthToken.Refresh(), YouTubeOAuthToken.expireTime.Subtract(new TimeSpan(0, 1, 0)));
-            TaskHelper.ScheduleUniqueRepeatingAction("YouTubeBroadcastInfoRefresh", () =>
-            {
-                try
-                {
-                    Plugin.Log($"Requesting live broadcast info...");
-                    HttpWebRequest web = (HttpWebRequest)WebRequest.Create("https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id%2Csnippet%2CcontentDetails%2Cstatus&mine=true");
-                    web.Method = "GET";
-                    web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
-                    web.Accept = "application/json";
+            TaskHelper.ScheduleUniqueRepeatingAction("YouTubeChannelRefresh", () => YouTubeChannel.Refresh(), 60000);
+            TaskHelper.ScheduleUniqueRepeatingAction("YouTubeLiveChatRefresh", () => YouTubeLiveChat.Refresh(), 0);
+        }
 
-                    HttpWebResponse resp = (HttpWebResponse)web.GetResponse();
-                    if (resp.StatusCode == HttpStatusCode.OK)
-                    {
-                        Stream dataStream = resp.GetResponseStream();
-                        StreamReader reader = new StreamReader(dataStream);
-                        string ret = reader.ReadToEnd();
-                        Plugin.Log($"Resp: {ret}");
-                        reader.Close();
-                    }
-                    else
-                    {
-                        Plugin.Log($"Error: {resp.StatusCode}");
-                    }
-                    resp.Close();
-                }
-                catch (WebException ex)
-                {
-                    switch (((HttpWebResponse)ex.Response).StatusCode)
-                    {
-                        // If we hit an unauthorized exception, the users auth token has expired
-                        case HttpStatusCode.Unauthorized:
-                            // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
-                            if (!YouTubeOAuthToken.Refresh(true))
-                            {
-                                TaskHelper.CancelAllTasks();
-
-                                // If we fail to refresh the auth token, the user probably unapproved our app; so we need to request approval again
-                                File.Delete(Path.Combine(Globals.DataPath, "YouTubeOAuthToken.json"));
-                                YouTubeOAuthToken.Generate();
-                            }
-                            break;
-                        case HttpStatusCode.Forbidden:
-                            Plugin.Log("The linked YouTube account is not enabled for live streaming! Enable live streaming, then try again!");
-                            break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log(ex.ToString());
-                }
-            }, 60000);
+        internal static void Stop()
+        {
+            TaskHelper.CancelTask("YouTubeOAuthRefresh");
+            TaskHelper.CancelTask("YouTubeChannelRefresh");
+            TaskHelper.CancelTask("YouTubeLiveChatRefresh");
         }
     }
 }

@@ -18,6 +18,10 @@ namespace StreamCore.YouTube
 
         public static void RunServer()
         {
+            // Stop the server if it's already running
+            if (_server != null && _server.IsListening)
+                StopServer();
+
             Random rand = new Random();
             while(true)
             {
@@ -87,7 +91,7 @@ namespace StreamCore.YouTube
                 {
                     // Redirect to our success page
                     response.Redirect("https://brian91292.dev/youtube/?success");
-                    YouTubeConnection.StartServiceMonitors();
+                    YouTubeConnection.Start();
                 }
                 else
                     // Redirect to our error page

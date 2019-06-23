@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using StreamCore.YouTube;
+using StreamCore.Utilities;
 
 namespace StreamCore
 {
@@ -23,12 +24,14 @@ namespace StreamCore
         
         private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
 
+        private static readonly object _loggerLock = new object();
         public static void Log(string text,
                 [CallerFilePath] string file = "",
                 [CallerMemberName] string member = "",
                 [CallerLineNumber] int line = 0)
         {
-            Console.WriteLine($"{ModuleName}::{Path.GetFileName(file)}->{member}({line}): {text}");
+            lock(_loggerLock) 
+                Console.WriteLine($"{ModuleName}::{Path.GetFileName(file)}->{member}({line}): {text}");
         }
 
         public void OnApplicationStart()
@@ -65,6 +68,10 @@ namespace StreamCore
 
             Globals.IsApplicationExiting = true;
 
+            // Cancel all running tasks
+            TaskHelper.CancelAllTasks();
+
+            // Shutdown our twitch client if it's initialized
             TwitchWebSocketClient.Shutdown();
         }
 

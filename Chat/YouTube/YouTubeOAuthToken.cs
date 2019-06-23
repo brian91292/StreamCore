@@ -34,8 +34,22 @@ namespace StreamCore.YouTube
         
         internal static void Generate()
         {
+            // Run a local http server on a random port, then launch a web browser for the user to approve our app
             YouTubeAuthServer.RunServer();
             Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}");
+        }
+
+        internal static void Invalidate()
+        {
+            // Stop polling for updates
+            YouTubeConnection.Stop();
+
+            // Set our local token to have expired an hour ago
+            expireTime = DateTime.UtcNow.Subtract(new TimeSpan(1, 0, 0));
+            Save();
+
+            // If we fail to refresh the auth token, the user probably unapproved our app; so we need to request approval again
+            File.Delete(Path.Combine(Globals.DataPath, "YouTubeOAuthToken.json"));
         }
         
         internal static bool Exchange(string code)
@@ -45,22 +59,25 @@ namespace StreamCore.YouTube
                 HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://brian91292.dev/youtube/oauth2/token?data={code}&redirect={_redirectUrl}");
                 web.Method = "GET";
 
-                HttpWebResponse resp = (HttpWebResponse)web.GetResponse();
-                if (resp.StatusCode != HttpStatusCode.OK)
+                using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
                 {
-                    Plugin.Log($"Error: {resp.StatusCode}, Status: {resp.StatusCode} ({resp.StatusDescription})");
-                    return false;
-                }
-                
-                // Update our token we got from the exchange
-                Stream dataStream = resp.GetResponseStream();
-                StreamReader reader = new StreamReader(dataStream);
-                string token = reader.ReadToEnd();
-                Update(token);
-                //Plugin.Log($"Exchange: {token}");
-                reader.Close();
-                resp.Close();
+                    if (resp.StatusCode != HttpStatusCode.OK)
+                    {
+                        Plugin.Log($"Error: {resp.StatusCode}, Status: {resp.StatusCode} ({resp.StatusDescription})");
+                        return false;
+                    }
 
+                    // Update our token we got from the exchange
+                    using (Stream dataStream = resp.GetResponseStream())
+                    {
+                        using (StreamReader reader = new StreamReader(dataStream))
+                        {
+                            string token = reader.ReadToEnd();
+                            Update(token);
+                            //Plugin.Log($"Exchange: {token}");
+                        }
+                    }
+                }
                 return true;
             }
             catch (WebException ex)
@@ -83,20 +100,25 @@ namespace StreamCore.YouTube
                 HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://brian91292.dev/youtube/oauth2/token?data={refreshToken}&redirect={_redirectUrl}&refresh");
                 web.Method = "GET";
 
-                HttpWebResponse resp = (HttpWebResponse)web.GetResponse();
-                if (resp.StatusCode != HttpStatusCode.OK)
+                string token = "";
+                using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
                 {
-                    Plugin.Log($"Error: {resp.StatusCode}, Status: {resp.StatusCode} ({resp.StatusDescription})");
-                    return false;
-                }
+                    if (resp.StatusCode != HttpStatusCode.OK)
+                    {
+                        Plugin.Log($"Error: {resp.StatusCode}, Status: {resp.StatusCode} ({resp.StatusDescription})");
+                        return false;
+                    }
 
-                // Read our token into a string
-                Stream dataStream = resp.GetResponseStream();
-                StreamReader reader = new StreamReader(dataStream);
-                string token = reader.ReadToEnd();
-                //Plugin.Log($"Refresh: {token}");
-                reader.Close();
-                resp.Close();
+                    // Read our token into a string
+                    using (Stream dataStream = resp.GetResponseStream())
+                    {
+                        using (StreamReader reader = new StreamReader(dataStream))
+                        {
+                            token = reader.ReadToEnd();
+                            //Plugin.Log($"Refresh: {token}");
+                        }
+                    }
+                }
 
                 //Read the response in then save the new auth token
                 if (!Update(token))

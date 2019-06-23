@@ -115,11 +115,12 @@ namespace StreamCore.Utilities
         {
             var newCancellationToken = new CancellationTokenSource();
             ct = newCancellationToken;
+
             return Task.Run(async delegate
             {
                 try
                 {
-                    while (!Globals.IsApplicationExiting && !newCancellationToken.IsCancellationRequested)
+                    while (!newCancellationToken.IsCancellationRequested)
                     {
                         action?.Invoke();
                         await Task.Delay(delay, newCancellationToken.Token);

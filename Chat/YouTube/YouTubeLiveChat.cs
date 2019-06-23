@@ -1,0 +1,222 @@
+﻿using StreamCore.SimpleJSON;
+using StreamCore.Utilities;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace StreamCore.YouTube
+{
+    public class TextMessageDetails
+    {
+        public string messageText { get; internal set; }
+
+        internal void Update(string messageTtext)
+        {
+            this.messageText = messageText;
+        }
+    }
+
+    public class YouTubeMessageInfo
+    {
+        public string type { get; internal set; } = "";
+        public string liveChatId { get; internal set; } = "";
+        public string authorChannelId { get; internal set; } = "";
+        public DateTime publishedAt { get; internal set; } = new DateTime();
+        public bool hasDisplayContent { get; internal set; } = false;
+        public string displayMessage { get; internal set; } = "";
+        public TextMessageDetails textMessageDetails { get; internal set; } = new TextMessageDetails();
+
+        internal void Update(JSONObject info)
+        {
+            type = info["type"].Value;
+            liveChatId = info["liveChatId"].Value;
+            authorChannelId = info["authorChannelId"].Value;
+            publishedAt = DateTime.Parse(info["publishedAt"].Value);
+            hasDisplayContent = info["hasDisplayContent"].AsBool;
+            displayMessage = info["displayMessage"].Value;
+            textMessageDetails.Update(info["textMessageDetails"]["messageText"].Value);
+        }
+    }
+
+    public class YouTubeMessageAuthor
+    {
+        public string channelId { get; internal set; } = "";
+        public string channelUrl { get; internal set; } = "";
+        public string displayName { get; internal set; } = "";
+        public string profileImageUrl { get; internal set; } = "";
+        public bool isVerified { get; internal set; } = false;
+        public bool isChatOwner { get; internal set; } = false;
+        public bool isChatSponsor { get; internal set; } = false;
+        public bool isChatModerator { get; internal set; } = false;
+
+        internal void Update(JSONObject author)
+        {
+            channelId = author["channelId"].Value;
+            channelUrl = author["channelUrl"].Value;
+            displayName = author["displayName"].Value;
+            profileImageUrl = author["profileImageUrl"].Value;
+            isVerified = author["isVerified"].AsBool;
+            isChatOwner = author["isChatOwner"].AsBool;
+            isChatSponsor = author["isChatSponsor"].AsBool;
+            isChatModerator = author["isChatModerator"].AsBool;
+        }
+    }
+
+    public class YouTubeMessage
+    {
+        public string kind { get; internal set; } = "";
+        public string etag { get; internal set; } = "";
+        public string id { get; internal set; } = "";
+        public YouTubeMessageInfo snippet { get; internal set; } = new YouTubeMessageInfo();
+        public YouTubeMessageAuthor authorDetails { get; internal set; } = new YouTubeMessageAuthor();
+
+        internal void Update(JSONObject message)
+        {
+            kind = message["kind"].Value;
+            etag = message["etag"].Value;
+            id = message["etag"].Value;
+            snippet.Update(message["snippet"].AsObject);
+            authorDetails.Update(message["authorDetails"].AsObject);
+        }
+    }
+    
+    public class YouTubeLiveChat
+    {
+        public static string kind { get; internal set; } = "";
+        public static string etag { get; internal set; } = "";
+        private static string _nextPageToken { get; set; } = "";
+        private static int _pollingIntervalMillis { get; set; } = 0;
+
+        #region Message Handler Dictionaries
+        private static Dictionary<string, Action<YouTubeMessage>> _onMessageReceived_Callbacks = new Dictionary<string, Action<YouTubeMessage>>();
+        #endregion
+
+        /// <summary>
+        /// YouTube OnMessageReceived event handler. *Note* The callback is NOT on the Unity thread!
+        /// </summary>
+        public static Action<YouTubeMessage> OnMessageReceived
+        {
+            set { lock (_onMessageReceived_Callbacks) { _onMessageReceived_Callbacks[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
+            get { return _onMessageReceived_Callbacks.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
+        }
+
+        internal static void Process(string json)
+        {
+            // Handle any json parsing errors
+            if (json == string.Empty)
+                return;
+            JSONNode node = JSON.Parse(json);
+            if (node == null || node.IsNull)
+                return;
+
+            if (node.HasKey("error"))
+            {
+                Plugin.Log(json);
+                return;
+            }
+
+            kind = node["kind"].Value;
+            etag = node["etag"].Value;
+            _nextPageToken = node["nextPageToken"].Value;
+            _pollingIntervalMillis = node["pollingIntervalMillis"].AsInt;
+            
+            foreach (JSONObject item in node["items"].AsArray)
+            {
+                YouTubeMessage newMessage = new YouTubeMessage();
+                newMessage.Update(item);
+                
+                foreach (var instance in _onMessageReceived_Callbacks)
+                {
+                    //string assemblyHash = instance.Key;
+                    //// Don't invoke the callback if it was registered by the assembly that sent the message which invoked this callback (no more vindaloop :D)
+                    //if (assemblyHash == invokerHash)
+                    //    continue;
+
+                    var action = instance.Value;
+                    if (action == null) return;
+
+                    foreach (var a in action.GetInvocationList())
+                    {
+                        try
+                        {
+                            a?.DynamicInvoke(newMessage);
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log(ex.ToString());
+                            _pollingIntervalMillis = 5000;
+                        }
+                    }
+                }
+            }
+        }
+        
+        internal static void Refresh()
+        {
+            try
+            {
+                Plugin.Log($"Requesting chat messages for live chat with id {YouTubeChannel.liveOrDefaultChatId}...");
+                HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeChannel.liveOrDefaultChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
+                web.Method = "GET";
+                web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
+                web.Accept = "application/json";
+
+                using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
+                {
+                    if (resp.StatusCode == HttpStatusCode.OK)
+                    {
+                        using (Stream dataStream = resp.GetResponseStream())
+                        {
+                            using (StreamReader reader = new StreamReader(dataStream))
+                            {
+                                string ret = reader.ReadToEnd();
+                                Process(ret);
+
+                                Plugin.Log($"Chat: {ret}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Plugin.Log($"Error: {resp.StatusCode.ToString()}");
+                    }
+                }
+            }
+            catch (WebException ex)
+            {
+                switch (((HttpWebResponse)ex.Response).StatusCode)
+                {
+                    // If we hit an unauthorized exception, the users auth token has expired
+                    case HttpStatusCode.Unauthorized:
+                        Plugin.Log("User is unauthorized!");
+                        // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
+                        if (!YouTubeOAuthToken.Refresh(true))
+                        {
+                            YouTubeOAuthToken.Invalidate();
+                            YouTubeOAuthToken.Generate();
+                        }
+                        break;
+                    case HttpStatusCode.Forbidden:
+                        Plugin.Log("The linked YouTube account is not enabled for live streaming! Enable live streaming, then try again!");
+                        break;
+                    default:
+                        Plugin.Log($"WebException: {ex.ToString()}, Message: {ex.Message}");
+                        break;
+                }
+                _pollingIntervalMillis = 3000;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log(ex.ToString());
+                _pollingIntervalMillis = 3000;
+            }
+            Thread.Sleep(_pollingIntervalMillis);
+        }
+    }
+}
