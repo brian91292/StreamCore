@@ -15,7 +15,7 @@ namespace StreamCore.YouTube
         public static string kind { get; internal set; } = "";
         public static string etag { get; internal set; } = "";
         public static string liveOrDefaultChatId { get; internal set; } = "";
-        public static Dictionary<string, LiveBroadcast> broadcasts { get; internal set; } = new Dictionary<string, LiveBroadcast>();
+        public static Dictionary<string, YouTubeLiveBroadcast> broadcasts { get; internal set; } = new Dictionary<string, YouTubeLiveBroadcast>();
         
         internal static bool Update(string json)
         {
@@ -42,7 +42,7 @@ namespace StreamCore.YouTube
                 if (!broadcasts.TryGetValue(broadcastId, out var broadcast))
                 {
                     // If the current broadcast does not exist in the dict, add it
-                    broadcast = new LiveBroadcast();
+                    broadcast = new YouTubeLiveBroadcast();
                     broadcasts[broadcastId] = broadcast;
                 }
 

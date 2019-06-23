@@ -40,7 +40,7 @@ namespace StreamCore.YouTube
         }
     }
 
-    public class BroadcastStatus
+    public class YouTubeBroadcastStatus
     {
         public string lifeCycleStatus { get; internal set; } = "";
         public string privacyStatus { get; internal set; } = "";
@@ -54,12 +54,12 @@ namespace StreamCore.YouTube
         }
     }
 
-    public class LiveBroadcast
+    public class YouTubeLiveBroadcast
     {
         public string kind { get; internal set; } = "";
         public string etag { get; internal set; } = "";
         public string id { get; internal set; } = "";
         public YouTubeBroadcastInfo snippet { get; internal set; } = new YouTubeBroadcastInfo();
-        public BroadcastStatus status { get; internal set; } = new BroadcastStatus();
+        public YouTubeBroadcastStatus status { get; internal set; } = new YouTubeBroadcastStatus();
     }
 }
