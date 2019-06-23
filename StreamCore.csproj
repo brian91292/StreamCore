@@ -189,7 +189,7 @@
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TwitchAPI.cs" />
-    <Compile Include="Chat\YouTube\YouTubeAuthServer.cs" />
+    <Compile Include="Chat\YouTube\YouTubeCallbackListener.cs" />
     <Compile Include="Utilities\ObjectPool.cs" />
     <Compile Include="Utilities\ReflectionUtil.cs" />
     <Compile Include="Utilities\SimpleJSON.cs" />

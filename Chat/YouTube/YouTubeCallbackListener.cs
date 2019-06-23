@@ -11,12 +11,12 @@ using WebSocketSharp.Server;
 
 namespace StreamCore.YouTube
 {
-    internal class YouTubeAuthServer
+    internal class YouTubeCallbackListener
     {
         internal static int port = 64209;
         private static HttpServer _server;
 
-        public static void RunServer()
+        internal static void RunServer()
         {
             // Stop the server if it's already running
             if (_server != null && _server.IsListening)
@@ -50,7 +50,7 @@ namespace StreamCore.YouTube
             Plugin.Log("Starting HTTP server on port " + port);
         }
 
-        public static void StopServer()
+        internal static void StopServer()
         {
             if (_server != null)
             {
@@ -60,7 +60,7 @@ namespace StreamCore.YouTube
             }
         }
 
-        public static void HttpServer_OnGet(HttpRequestEventArgs e)
+        private static void HttpServer_OnGet(HttpRequestEventArgs e)
         {
             var request = e.Request;
             var response = e.Response;

@@ -111,21 +111,26 @@ namespace StreamCore.YouTube
             // Handle any json parsing errors
             if (json == string.Empty)
                 return;
+
+            // Parse the chat info into a json node, making sure it's not null
             JSONNode node = JSON.Parse(json);
             if (node == null || node.IsNull)
                 return;
 
+            // If the data has an error node, print out the entire json string for debugging purposes
             if (node.HasKey("error"))
             {
                 Plugin.Log(json);
                 return;
             }
 
+            // Read in the json data to our data structs
             kind = node["kind"].Value;
             etag = node["etag"].Value;
             _nextPageToken = node["nextPageToken"].Value;
             _pollingIntervalMillis = node["pollingIntervalMillis"].AsInt;
-            
+
+            // Iterate through each message, invoking any regstered callbacks along the way
             foreach (JSONObject item in node["items"].AsArray)
             {
                 YouTubeMessage newMessage = new YouTubeMessage();
@@ -153,6 +158,7 @@ namespace StreamCore.YouTube
                         }
                     }
                 }
+                Thread.Sleep(0);
             }
         }
         
@@ -161,7 +167,7 @@ namespace StreamCore.YouTube
             try
             {
                 //Plugin.Log($"Requesting chat messages for live chat with id {YouTubeChannel.liveOrDefaultChatId}...");
-                HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeLiveBroadcast.liveOrDefaultChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
+                HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeLiveBroadcast.currentBroadcast.snippet.liveChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
                 web.Method = "GET";
                 web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
                 web.Accept = "application/json";

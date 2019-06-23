@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace StreamCore.YouTube
@@ -70,7 +71,7 @@ namespace StreamCore.YouTube
     {
         public static string kind { get; internal set; } = "";
         public static string etag { get; internal set; } = "";
-        public static string liveOrDefaultChatId { get; internal set; } = "";
+        public static YouTubeLiveBroadcastInfo currentBroadcast { get; internal set; }
         public static Dictionary<string, YouTubeLiveBroadcastInfo> broadcasts { get; internal set; } = new Dictionary<string, YouTubeLiveBroadcastInfo>();
         
         internal static bool Update(string json)
@@ -78,20 +79,25 @@ namespace StreamCore.YouTube
             // Handle any json parsing errors
             if (json == string.Empty)
                 return false;
+
+            // Parse the broadcast info into a json node, making sure it's not null
             JSONNode node = JSON.Parse(json);
             if (node == null || node.IsNull)
                 return false;
 
+            // If the data has an error node, print out the entire json string for debugging purposes
             if (node.HasKey("error") )
             {
                 Plugin.Log(json);
                 return false;
             }
 
+            // Read in the json data to our data structs
             kind = node["kind"].Value;
             etag = node["etag"].Value;
 
-            string currentChannel = "";
+            YouTubeLiveBroadcastInfo tmpCurrentBroadcast = null;
+            // Iterate through each broadcast, updating the info for each one along the way
             foreach (JSONObject item in node["items"].AsArray)
             {
                 string broadcastId = item["id"].Value;
@@ -110,13 +116,15 @@ namespace StreamCore.YouTube
                 broadcast.status.Update(item["status"].AsObject);
 
                 // Store our default or live broadcast id so we always have some chat to display even if the user isn't live
-                if (broadcast.snippet.liveChatId != "" && broadcast.status.recordingStatus == "recording" || (currentChannel == "" && broadcast.snippet.isDefaultBroadcast))
+                if (broadcast.snippet.liveChatId != "" && broadcast.status.recordingStatus == "recording" || (tmpCurrentBroadcast == null && broadcast.snippet.isDefaultBroadcast))
                 {
-                    currentChannel = broadcast.snippet.liveChatId;
-                    Plugin.Log($"Default broadcast \"{broadcast.snippet.title}\" (ID: {broadcast.id}, ChannelID: {broadcast.snippet.channelId}) with description \"{broadcast.snippet.description}\" status is \"{broadcast.status.recordingStatus}\"");
+                    tmpCurrentBroadcast = broadcast;
+                    Plugin.Log($"Broadcast \"{broadcast.snippet.title}\" (ID: {broadcast.id}, ChannelID: {broadcast.snippet.channelId}) with description \"{broadcast.snippet.description}\" status is \"{broadcast.status.recordingStatus}\" (isDefaultBroadcast? {broadcast.snippet.isDefaultBroadcast})");
                 }
+                Thread.Sleep(0);
             }
-            liveOrDefaultChatId = currentChannel;
+            // Finally, store our current broadcast into a global variable for others to utilize
+            currentBroadcast = tmpCurrentBroadcast;
             return true;
         }
 
