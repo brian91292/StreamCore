@@ -133,7 +133,7 @@ namespace StreamCore.YouTube
             try
             {
                 Plugin.Log($"Requesting live broadcast info...");
-                HttpWebRequest web = (HttpWebRequest)WebRequest.Create("https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id%2Csnippet%2Cstatus%2ccontentDetails&broadcastStatus=all&broadcastType=all&maxResults=50");
+                HttpWebRequest web = (HttpWebRequest)WebRequest.Create("https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id%2Csnippet%2Cstatus&broadcastStatus=all&broadcastType=all&maxResults=50");
                 web.Method = "GET";
                 web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
                 web.Accept = "application/json";

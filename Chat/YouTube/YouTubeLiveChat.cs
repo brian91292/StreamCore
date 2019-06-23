@@ -166,6 +166,13 @@ namespace StreamCore.YouTube
         {
             try
             {
+                // Wait a few seconds then return if the current broadcast is null
+                if(YouTubeLiveBroadcast.currentBroadcast == null)
+                {
+                    Thread.Sleep(3000);
+                    return;
+                }
+
                 //Plugin.Log($"Requesting chat messages for live chat with id {YouTubeChannel.liveOrDefaultChatId}...");
                 HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeLiveBroadcast.currentBroadcast.snippet.liveChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
                 web.Method = "GET";

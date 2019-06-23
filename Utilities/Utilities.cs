@@ -19,8 +19,6 @@ namespace StreamCore.Utils
 {
     public class Utilities
     {
-        private static readonly Regex _stripHtmlRegex = new Regex("<.*?>", RegexOptions.Compiled);
-
         public static void EmptyDirectory(string directory, bool delete = true)
         {
             if (Directory.Exists(directory))
@@ -181,6 +179,7 @@ namespace StreamCore.Utils
             return false;
         }
 
+        private static readonly Regex _stripHtmlRegex = new Regex("<.*?>", RegexOptions.Compiled);
         public static string EscapeHTML(string input)
         {
             return _stripHtmlRegex.Replace(input, m => m.Value.Insert(1, "\uFEFF"));

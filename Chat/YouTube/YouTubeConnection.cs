@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace StreamCore.YouTube
@@ -52,6 +53,9 @@ namespace StreamCore.YouTube
                         YouTubeOAuthToken.Generate();
                         return;
                     }
+
+                    // Sleep for a second before connecting, to allow for other plugins to register their callbacks
+                    Thread.Sleep(1000);
 
                     // Finally, request our live broadcast info if everything went well
                     Start();
