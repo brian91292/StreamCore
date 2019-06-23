@@ -21,7 +21,7 @@ namespace StreamCore.YouTube
         private static readonly string _requestedScope = WebSocketSharp.Net.HttpUtility.UrlEncode("https://www.googleapis.com/auth/youtube");
         private static string _redirectUrl
         {
-            get => WebSocketSharp.Net.HttpUtility.UrlEncode($"http://localhost:{YouTubeAuthServer.port}/callback");
+            get => WebSocketSharp.Net.HttpUtility.UrlEncode($"http://localhost:{YouTubeCallbackListener.port}/callback");
         }
 
         internal static string accessToken = "";
@@ -35,7 +35,7 @@ namespace StreamCore.YouTube
         internal static void Generate()
         {
             // Run a local http server on a random port, then launch a web browser for the user to approve our app
-            YouTubeAuthServer.RunServer();
+            YouTubeCallbackListener.RunServer();
             Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}");
         }
 

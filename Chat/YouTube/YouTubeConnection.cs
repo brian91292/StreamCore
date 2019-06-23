@@ -12,43 +12,51 @@ namespace StreamCore.YouTube
 {
     public class YouTubeConnection
     {
+        internal static bool initialized = false;
         public static void Initialize()
         {
-            Plugin.Log("Initializing!");
-            
-            string tokenPath = Path.Combine(Globals.DataPath, "YouTubeOAuthToken.json");
-            if (!File.Exists(tokenPath))
+            if (!initialized)
             {
-                Plugin.Log("YouTubeOAuthToken.json does not exist, generating new auth token!");
-                // If we haven't already retrieved an oauth token, generate a new one
-                YouTubeOAuthToken.Generate();
-                return;
+                initialized = true;
+                Task.Run(() =>
+                {
+                    Plugin.Log("Initializing!");
+
+                    string tokenPath = Path.Combine(Globals.DataPath, "YouTubeOAuthToken.json");
+                    if (!File.Exists(tokenPath))
+                    {
+                        Plugin.Log("YouTubeOAuthToken.json does not exist, generating new auth token!");
+                        // If we haven't already retrieved an oauth token, generate a new one
+                        YouTubeOAuthToken.Generate();
+                        return;
+                    }
+
+                    Plugin.Log("Auth token file exists!");
+
+                    // Read our oauth token in from file
+                    if (!YouTubeOAuthToken.Update(File.ReadAllText(tokenPath), false))
+                    {
+                        Plugin.Log("Failed to parse oauth token file, generating new auth token!");
+                        // If we fail to parse the file, generate a new oauth token
+                        YouTubeOAuthToken.Generate();
+                        return;
+                    }
+
+                    Plugin.Log("Success parsing oauth token file!");
+
+                    // Check if our auth key is expired, and if so refresh it
+                    if (!YouTubeOAuthToken.Refresh())
+                    {
+                        Plugin.Log("Failed to refresh access token, generating new auth token!");
+                        // If we fail to refresh our access token, generate a new one
+                        YouTubeOAuthToken.Generate();
+                        return;
+                    }
+
+                    // Finally, request our live broadcast info if everything went well
+                    Start();
+                });
             }
-
-            Plugin.Log("Auth token file exists!");
-
-            // Read our oauth token in from file
-            if(!YouTubeOAuthToken.Update(File.ReadAllText(tokenPath), false))
-            {
-                Plugin.Log("Failed to parse oauth token file, generating new auth token!");
-                // If we fail to parse the file, generate a new oauth token
-                YouTubeOAuthToken.Generate();
-                return;
-            }
-
-            Plugin.Log("Success parsing oauth token file!");
-
-            // Check if our auth key is expired, and if so refresh it
-            if (!YouTubeOAuthToken.Refresh())
-            {
-                Plugin.Log("Failed to refresh access token, generating new auth token!");
-                // If we fail to refresh our access token, generate a new one
-                YouTubeOAuthToken.Generate();
-                return;
-            }
-
-            // Finally, request our live broadcast info if everything went well
-            Start();
         }
         
         internal static void Start()

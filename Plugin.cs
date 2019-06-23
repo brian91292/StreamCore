@@ -41,8 +41,6 @@ namespace StreamCore
 
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;
-
-            Task.Run(() => YouTubeConnection.Initialize());
         }
 
         private void SceneManager_activeSceneChanged(Scene from, Scene to)
