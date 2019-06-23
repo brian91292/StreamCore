@@ -161,7 +161,7 @@ namespace StreamCore.YouTube
         {
             try
             {
-                Plugin.Log($"Requesting chat messages for live chat with id {YouTubeChannel.liveOrDefaultChatId}...");
+                //Plugin.Log($"Requesting chat messages for live chat with id {YouTubeChannel.liveOrDefaultChatId}...");
                 HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeChannel.liveOrDefaultChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
                 web.Method = "GET";
                 web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
@@ -177,8 +177,7 @@ namespace StreamCore.YouTube
                             {
                                 string ret = reader.ReadToEnd();
                                 Process(ret);
-
-                                Plugin.Log($"Chat: {ret}");
+                                //Plugin.Log($"Chat: {ret}");
                             }
                         }
                     }
