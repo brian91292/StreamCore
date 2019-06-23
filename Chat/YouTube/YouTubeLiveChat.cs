@@ -23,7 +23,7 @@ namespace StreamCore.YouTube
         }
     }
 
-    public class YouTubeMessageInfo
+    public class YouTubeMessageDetails
     {
         public string type { get; internal set; } = "";
         public string liveChatId { get; internal set; } = "";
@@ -71,7 +71,7 @@ namespace StreamCore.YouTube
     {
         public string kind { get; set; } = "";
         public string etag { get; set; } = "";
-        public YouTubeMessageInfo snippet { get;  set; } = new YouTubeMessageInfo();
+        public YouTubeMessageDetails snippet { get;  set; } = new YouTubeMessageDetails();
 
         internal void Update(JSONObject chatMsg)
         {
@@ -161,7 +161,7 @@ namespace StreamCore.YouTube
             try
             {
                 //Plugin.Log($"Requesting chat messages for live chat with id {YouTubeChannel.liveOrDefaultChatId}...");
-                HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeChannel.liveOrDefaultChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
+                HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId={YouTubeLiveBroadcast.liveOrDefaultChatId}&part=id%2Csnippet%2CauthorDetails{(_nextPageToken!=""? $"&pageToken={_nextPageToken}" : "")}");
                 web.Method = "GET";
                 web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
                 web.Accept = "application/json";

@@ -54,7 +54,7 @@ namespace StreamCore.YouTube
         internal static void Start()
         {
             TaskHelper.ScheduleUniqueActionAtTime("YouTubeOAuthRefresh", () => YouTubeOAuthToken.Refresh(), YouTubeOAuthToken.expireTime.Subtract(new TimeSpan(0, 1, 0)));
-            TaskHelper.ScheduleUniqueRepeatingAction("YouTubeChannelRefresh", () => YouTubeChannel.Refresh(), 60000);
+            TaskHelper.ScheduleUniqueRepeatingAction("YouTubeChannelRefresh", () => YouTubeLiveBroadcast.Refresh(), 60000);
             TaskHelper.ScheduleUniqueRepeatingAction("YouTubeLiveChatRefresh", () => YouTubeLiveChat.Refresh(), 0);
         }
 

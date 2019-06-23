@@ -178,8 +178,7 @@
     <Compile Include="Chat\websocket-sharp\WebSocketException.cs" />
     <Compile Include="Chat\websocket-sharp\WebSocketFrame.cs" />
     <Compile Include="Chat\websocket-sharp\WebSocketState.cs" />
-    <Compile Include="Chat\YouTube\YouTubeBroadcast.cs" />
-    <Compile Include="Chat\YouTube\YouTubeChannel.cs" />
+    <Compile Include="Chat\YouTube\YouTubeLiveBroadcast.cs" />
     <Compile Include="Chat\YouTube\YouTubeLiveChat.cs" />
     <Compile Include="Chat\YouTube\YouTubeConnection.cs" />
     <Compile Include="Chat\YouTube\YouTubeOAuthToken.cs" />
