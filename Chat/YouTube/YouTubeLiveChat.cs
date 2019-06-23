@@ -150,7 +150,6 @@ namespace StreamCore.YouTube
                         catch (Exception ex)
                         {
                             Plugin.Log(ex.ToString());
-                            _pollingIntervalMillis = 5000;
                         }
                     }
                 }
