@@ -94,8 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CHANGELOG.md" />
-    <Compile Include="Chat\ChatMessageBase.cs" />
-    <Compile Include="Chat\ChatUserBase.cs" />
+    <Compile Include="Chat\GenericChatMessage.cs" />
     <Compile Include="Chat\Twitch\TwitchRoom.cs" />
     <Compile Include="Chat\Twitch\TwitchMessageHandlers.cs" />
     <Compile Include="Chat\Twitch\TwitchChannel.cs" />

@@ -1,4 +1,5 @@
-﻿using StreamCore.SimpleJSON;
+﻿using StreamCore.Chat;
+using StreamCore.SimpleJSON;
 using StreamCore.Utilities;
 using System;
 using System.Collections.Generic;
@@ -44,11 +45,9 @@ namespace StreamCore.YouTube
         }
     }
 
-    public class YouTubeMessageAuthor
+    public class YouTubeUser : GenericChatUser
     {
-        public string channelId { get; internal set; } = "";
         public string channelUrl { get; internal set; } = "";
-        public string displayName { get; internal set; } = "";
         public string profileImageUrl { get; internal set; } = "";
         public bool isVerified { get; internal set; } = false;
         public bool isChatOwner { get; internal set; } = false;
@@ -57,7 +56,7 @@ namespace StreamCore.YouTube
 
         internal void Update(JSONObject author)
         {
-            channelId = author["channelId"].Value;
+            id = author["channelId"].Value;
             channelUrl = author["channelUrl"].Value;
             displayName = author["displayName"].Value;
             profileImageUrl = author["profileImageUrl"].Value;
@@ -68,21 +67,22 @@ namespace StreamCore.YouTube
         }
     }
 
-    public class YouTubeMessage
+    public class YouTubeMessage : GenericChatMessage
     {
-        public string kind { get; internal set; } = "";
-        public string etag { get; internal set; } = "";
-        public string id { get; internal set; } = "";
-        public YouTubeMessageInfo snippet { get; internal set; } = new YouTubeMessageInfo();
-        public YouTubeMessageAuthor authorDetails { get; internal set; } = new YouTubeMessageAuthor();
+        public string kind { get; set; } = "";
+        public string etag { get; set; } = "";
+        public YouTubeMessageInfo snippet { get;  set; } = new YouTubeMessageInfo();
 
-        internal void Update(JSONObject message)
+        internal void Update(JSONObject chatMsg)
         {
-            kind = message["kind"].Value;
-            etag = message["etag"].Value;
-            id = message["etag"].Value;
-            snippet.Update(message["snippet"].AsObject);
-            authorDetails.Update(message["authorDetails"].AsObject);
+            snippet.Update(chatMsg["snippet"].AsObject);
+            YouTubeUser newUser = new YouTubeUser();
+            newUser.Update(chatMsg["authorDetails"].AsObject);
+            user = newUser;
+            kind = chatMsg["kind"].Value;
+            etag = chatMsg["etag"].Value;
+            id = chatMsg["etag"].Value;
+            message = snippet.displayMessage;
         }
     }
     

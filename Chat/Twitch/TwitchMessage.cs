@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace StreamCore.Chat
 {
-    public class TwitchMessage : ChatMessageBase
+    public class TwitchMessage : GenericChatMessage
     {
-        public string hostString = "";
-        public string messageType = "";
-        public string channelName = "";
-        public string roomId = "";
-        public string emotes = "";
-        public int bits;
-        public TwitchUser user = new TwitchUser();
+        public string rawMessage { get; set; } = "";
+        public string hostString { get; set; } = "";
+        public string messageType { get; set; } = "";
+        public string channelName { get; set; } = "";
+        public string roomId { get; set; } = "";
+        public string emotes { get; set; } = "";
+        public int bits { get; set; } = 0;
 
         /// <summary>
         /// All the tags associated with the current TwitchMessage. Tag = match.Groups["Tag"].Value, Value = match.Groups["Value"].Value

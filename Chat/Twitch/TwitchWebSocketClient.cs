@@ -472,6 +472,7 @@ namespace StreamCore.Chat
                 
                 // Instantiate our twitch message
                 TwitchMessage twitchMsg = new TwitchMessage();
+                twitchMsg.user = new TwitchUser();
                 twitchMsg.rawMessage = rawMessage;
                 twitchMsg.messageType = messageType.Groups["MessageType"].Value;
                 twitchMsg.tags = _tagRegex.Matches(rawMessage);

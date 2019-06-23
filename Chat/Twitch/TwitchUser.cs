@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 namespace StreamCore.Chat
 {
-    public class TwitchUser : ChatUserBase
+    public class TwitchUser : GenericChatUser
     {
-        public string color = "";
+        public string username = "";
         public string badges = "";
+        public bool isBroadcaster;
+        public bool isMod;
         public bool isSub;
         public bool isTurbo;
         public bool isVip;

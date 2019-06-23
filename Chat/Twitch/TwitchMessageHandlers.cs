@@ -202,12 +202,12 @@ namespace StreamCore.Chat
                     twitchMsg.emotes = t.Groups["Value"].Value;
                     break;
                 case "badges":
-                    twitchMsg.user.badges = t.Groups["Value"].Value;
-                    twitchMsg.user.isBroadcaster = twitchMsg.user.badges.Contains("broadcaster/");
-                    twitchMsg.user.isSub = twitchMsg.user.badges.Contains("subscriber/");
-                    twitchMsg.user.isTurbo = twitchMsg.user.badges.Contains("turbo/");
-                    twitchMsg.user.isMod = twitchMsg.user.badges.Contains("moderator/");
-                    twitchMsg.user.isVip = twitchMsg.user.badges.Contains("vip/");
+                    twitchMsg.user.Twitch.badges = t.Groups["Value"].Value;
+                    twitchMsg.user.Twitch.isBroadcaster = twitchMsg.user.Twitch.badges.Contains("broadcaster/");
+                    twitchMsg.user.Twitch.isSub = twitchMsg.user.Twitch.badges.Contains("subscriber/");
+                    twitchMsg.user.Twitch.isTurbo = twitchMsg.user.Twitch.badges.Contains("turbo/");
+                    twitchMsg.user.Twitch.isMod = twitchMsg.user.Twitch.badges.Contains("moderator/");
+                    twitchMsg.user.Twitch.isVip = twitchMsg.user.Twitch.badges.Contains("vip/");
                     break;
                 case "color":
                     twitchMsg.user.color = t.Groups["Value"].Value;
@@ -232,8 +232,8 @@ namespace StreamCore.Chat
 
         private static void PRIVMSG_Handler(TwitchMessage twitchMsg, string invokerHash)
         {
-            twitchMsg.user.username = twitchMsg.hostString.Split('!')[0];
-            twitchMsg.user.displayName = twitchMsg.user.username;
+            twitchMsg.user.Twitch.username = twitchMsg.hostString.Split('!')[0];
+            twitchMsg.user.displayName = twitchMsg.user.Twitch.username;
             foreach (Match t in twitchMsg.tags)
                 ParseMessageTag(t, ref twitchMsg);
             
@@ -274,7 +274,7 @@ namespace StreamCore.Chat
             foreach (Match t in twitchMsg.tags)
                 ParseMessageTag(t, ref twitchMsg);
 
-            TwitchWebSocketClient.OurTwitchUser = twitchMsg.user;
+            TwitchWebSocketClient.OurTwitchUser = twitchMsg.user.Twitch;
 
             SafeInvoke(_USERSTATE_CALLBACKS, twitchMsg, invokerHash);
         }

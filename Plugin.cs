@@ -18,7 +18,7 @@ namespace StreamCore
         public static readonly string ModuleName = "Stream Core";
 
         public string Name => ModuleName;
-        public string Version => "1.0.5";
+        public string Version => "2.0.0";
 
         public static Plugin Instance { get; private set; }
         
