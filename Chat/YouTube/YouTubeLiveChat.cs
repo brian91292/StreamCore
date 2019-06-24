@@ -169,7 +169,7 @@ namespace StreamCore.YouTube
                 // Wait a few seconds then return if the current broadcast is null
                 if(YouTubeLiveBroadcast.currentBroadcast == null)
                 {
-                    Thread.Sleep(3000);
+                    Thread.Sleep(5000);
                     return;
                 }
 
