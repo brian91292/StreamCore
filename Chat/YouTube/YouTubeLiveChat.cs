@@ -206,15 +206,16 @@ namespace StreamCore.YouTube
                     // If we hit an unauthorized exception, the users auth token has expired
                     case HttpStatusCode.Unauthorized:
                         Plugin.Log("User is unauthorized!");
-                        // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
                         if (!YouTubeOAuthToken.Refresh(true))
                         {
+                            // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
                             YouTubeOAuthToken.Invalidate();
                             YouTubeOAuthToken.Generate();
                         }
                         break;
                     case HttpStatusCode.Forbidden:
-                        Plugin.Log("The linked YouTube account is not enabled for live streaming! Enable live streaming, then try again!");
+                        Plugin.Log("The linked YouTube account is not enabled for live streaming, or the oauth quota has been reached.");
+                        YouTubeConnection.Stop();
                         break;
                     default:
                         Plugin.Log($"WebException: {ex.ToString()}, Message: {ex.Message}");

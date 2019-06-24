@@ -176,7 +176,8 @@ namespace StreamCore.YouTube
                         }
                         break;
                     case HttpStatusCode.Forbidden:
-                        Plugin.Log("The linked YouTube account is not enabled for live streaming! Enable live streaming, then try again!");
+                        Plugin.Log("The linked YouTube account is not enabled for live streaming, or the oauth quota has been reached.");
+                        YouTubeConnection.Stop();
                         break;
                     default:
                         Plugin.Log($"WebException: {ex.ToString()}, Message: {ex.Message}");
