@@ -1,5 +1,5 @@
 ﻿using StreamCore.SimpleJSON;
-using StreamCore.Utilities;
+using StreamCore.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -148,9 +148,11 @@ namespace StreamCore.YouTube
                             using (StreamReader reader = new StreamReader(dataStream))
                             {
                                 string ret = reader.ReadToEnd();
-                                Update(ret);
-                                Plugin.Log($"There are currently {broadcasts.Count} broadcasts being tracked.");// Ret: {ret}");
-
+                                if (Update(ret))
+                                {
+                                    TaskHelper.CancelTask("YouTubeChannelRefresh");
+                                    Plugin.Log($"There are currently {broadcasts.Count} broadcasts being tracked.");// Ret: {ret}");
+                                }
                                 //Plugin.Log($"Broadcast \"{broadcast.Value.snippet.title}\" (ID: {broadcast.Value.id}, ChannelID: {broadcast.Value.snippet.channelId}) with description \"{broadcast.Value.snippet.description}\" status is \"{broadcast.Value.status.recordingStatus}\"");
                             }
                         }

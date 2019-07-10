@@ -1,6 +1,6 @@
 ﻿using StreamCore.Chat;
 using StreamCore.SimpleJSON;
-using StreamCore.Utilities;
+using StreamCore.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -206,9 +206,10 @@ namespace StreamCore.YouTube
                     // If we hit an unauthorized exception, the users auth token has expired
                     case HttpStatusCode.Unauthorized:
                         Plugin.Log("User is unauthorized!");
+                        // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
                         if (!YouTubeOAuthToken.Refresh(true))
                         {
-                            // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
+                            // If the refresh fails, we need to request permission from the user again as they probably unapproved our app
                             YouTubeOAuthToken.Invalidate();
                             YouTubeOAuthToken.Generate();
                         }

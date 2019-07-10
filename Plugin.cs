@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using StreamCore.YouTube;
-using StreamCore.Utilities;
+using StreamCore.Utils;
 
 namespace StreamCore
 {

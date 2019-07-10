@@ -499,9 +499,16 @@ namespace StreamCore.Chat
                 if(twitchMsg.messageType == "NOTICE")
                 {
                     if (twitchMsg.message.StartsWith("Login authentication failed")) {
-                        Plugin.Log($"Invalid Twitch login info! Closing connection!");
+                        Plugin.Log("Invalid Twitch login info! Closing connection!");
                         LoggedIn = false;
-                        _ws.Close();
+                        try
+                        {
+                            _ws.Close();
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log(ex.ToString());
+                        }
                     }
                 }
                 TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);

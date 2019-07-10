@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace StreamCore.Utilities
+namespace StreamCore.Utils
 {
     public class TaskHelper
     {

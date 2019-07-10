@@ -72,22 +72,13 @@ namespace StreamCore.YouTube
             }
             string url = parts[0];
             string query = parts[1];
-
-
+            
             if(url == "/callback")
             {
                 response.StatusCode = 307;
 
-                string code = "";
-                // Find the code param
-                foreach (string param in query.Split(new char[] { '&' }))
-                {
-                    if (param.StartsWith("code="))
-                        code = param.Split(new char[] { '=' })[1];
-                }
-
                 // If we successfully exchange our code for an auth token, request a listing of live broadcast info
-                if (YouTubeOAuthToken.Exchange(code))
+                if (YouTubeOAuthToken.Exchange(request.QueryString["code"]))
                 {
                     // Redirect to our success page
                     response.Redirect("https://brian91292.dev/youtube/?success");

@@ -14,6 +14,7 @@ using IllusionPlugin;
 using System.Reflection;
 using System.IO.Compression;
 using StreamCore.Chat;
+using System.Security.Cryptography;
 
 namespace StreamCore.Utils
 {
@@ -177,6 +178,34 @@ namespace StreamCore.Utils
                 }
             }
             return false;
+        }
+        
+        public static string randomDataBase64url(uint length)
+        {
+            RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
+            byte[] bytes = new byte[length];
+            rng.GetBytes(bytes);
+            return base64urlencodeNoPadding(bytes);
+        }
+        
+        public static byte[] sha256(string inputStirng)
+        {
+            byte[] bytes = Encoding.ASCII.GetBytes(inputStirng);
+            SHA256Managed sha256 = new SHA256Managed();
+            return sha256.ComputeHash(bytes);
+        }
+        
+        public static string base64urlencodeNoPadding(byte[] buffer)
+        {
+            string base64 = Convert.ToBase64String(buffer);
+
+            // Converts base64 to base64url.
+            base64 = base64.Replace("+", "-");
+            base64 = base64.Replace("/", "_");
+            // Strips padding.
+            base64 = base64.Replace("=", "");
+
+            return base64;
         }
 
         private static readonly Regex _stripHtmlRegex = new Regex("<.*?>", RegexOptions.Compiled);
