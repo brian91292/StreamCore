@@ -106,6 +106,61 @@ namespace StreamCore.YouTube
             get { return _onMessageReceived_Callbacks.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
         }
 
+        public static bool SendMessage(string message)
+        {
+            if (YouTubeLiveBroadcast.currentBroadcast == null)
+            {
+                return false;
+            }
+
+            HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet");
+            web.Method = "POST";
+            web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
+            web.ContentType = "application/json";
+
+            JSONObject container = new JSONObject();
+            container["snippet"] = new JSONObject();
+            container["snippet"]["liveChatId"] = new JSONString(YouTubeLiveBroadcast.currentBroadcast.snippet.liveChatId);
+            container["snippet"]["type"] = new JSONString("textMessageEvent");
+            container["snippet"]["textMessageDetails"] = new JSONObject();
+            container["snippet"]["textMessageDetails"]["messageText"] = new JSONString(message);
+            string snippetString = container.ToString();
+            Plugin.Log($"Sending {snippetString}");
+            var postData = Encoding.ASCII.GetBytes(snippetString);
+            web.ContentLength = postData.Length;
+
+            using (var stream = web.GetRequestStream())
+                stream.Write(postData, 0, postData.Length);
+
+            using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
+            {
+                if (resp.StatusCode != HttpStatusCode.OK)
+                {
+                    using (Stream dataStream = resp.GetResponseStream())
+                    {
+                        using (StreamReader reader = new StreamReader(dataStream))
+                        {
+                            var response = reader.ReadToEnd();
+                            Plugin.Log($"Status: {resp.StatusCode} ({resp.StatusDescription}), Response: {response}");
+                            return false;
+                        }
+                    }
+                    
+                }
+
+                // Read our token into a string
+                using (Stream dataStream = resp.GetResponseStream())
+                {
+                    using (StreamReader reader = new StreamReader(dataStream))
+                    {
+                        var response = reader.ReadToEnd();
+                        Plugin.Log($"Response: {response}");
+                        return true;
+                    }
+                }
+            }
+        }
+
         internal static void Process(string json)
         {
             // Handle any json parsing errors
@@ -201,11 +256,20 @@ namespace StreamCore.YouTube
             }
             catch (WebException ex)
             {
+                // Read the response and log it
+                using (Stream dataStream = ex.Response.GetResponseStream())
+                {
+                    using (StreamReader reader = new StreamReader(dataStream))
+                    {
+                        var response = reader.ReadToEnd();
+                        Plugin.Log($"Status: {ex.Status}, Response: {response}");
+                    }
+                }
+
                 switch (((HttpWebResponse)ex.Response).StatusCode)
                 {
                     // If we hit an unauthorized exception, the users auth token has expired
                     case HttpStatusCode.Unauthorized:
-                        Plugin.Log("User is unauthorized!");
                         // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
                         if (!YouTubeOAuthToken.Refresh(true))
                         {
@@ -215,11 +279,7 @@ namespace StreamCore.YouTube
                         }
                         break;
                     case HttpStatusCode.Forbidden:
-                        Plugin.Log("The linked YouTube account is not enabled for live streaming, or the oauth quota has been reached.");
                         YouTubeConnection.Stop();
-                        break;
-                    default:
-                        Plugin.Log($"WebException: {ex.ToString()}, Message: {ex.Message}");
                         break;
                 }
                 _pollingIntervalMillis = 3000;

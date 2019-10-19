@@ -16,8 +16,8 @@ namespace StreamCore.YouTube
 {
     internal class YouTubeOAuthToken
     {
-        private static readonly string _clientId = //redacted
-        private static readonly string _clientSecret = //redacted
+        private static string _clientId = String.Empty;
+        private static string _clientSecret = String.Empty;
         private static readonly string _requestedScope = WebSocketSharp.Net.HttpUtility.UrlEncode("https://www.googleapis.com/auth/youtube");
         private static string _codeVerifier = "";
         private static string _redirectUrl
@@ -35,12 +35,43 @@ namespace StreamCore.YouTube
         
         internal static void Generate()
         {
-            _codeVerifier = Utilities.randomDataBase64url(32);
-            string code_challenge = Utilities.base64urlencodeNoPadding(Utilities.sha256(_codeVerifier));
+            string OAuthPath = Path.Combine(Globals.DataPath, "YouTubeClientId.json");
+            if (File.Exists(OAuthPath))
+            {
+                try
+                {
+                    // Parse the credentials into a JSON document
+                    JSONNode OAuthJSON = JSON.Parse(File.ReadAllText(OAuthPath));
+                    if(OAuthJSON == null)
+                    {
+                        Plugin.Log("OAuthJSON was null!");
+                        return;
+                    }
 
-            // Run a local http server on a random port, then launch a web browser for the user to approve our app
-            YouTubeCallbackListener.RunServer();
-            Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}&code_challenge={code_challenge}&code_challenge_method=S256");
+                    // Make sure the installed object is present- this indicates the user created the right type of credentials
+                    if(!OAuthJSON["installed"].IsObject)
+                    {
+                        Plugin.Log("Missing \"installed\" section from YouTubeOAuth.json! Aborting!");
+                        return;
+                    }
+
+                    // Try to parse out the client id and client secret
+                    _clientId = OAuthJSON["installed"]["client_id"].Value;
+                    _clientSecret = OAuthJSON["installed"]["client_secret"].Value;
+                }
+                catch(Exception ex)
+                {
+                    Plugin.Log($"An error occurred while trying to parse YouTubeOAuth.json. {ex.ToString()}");
+                    return;
+                }
+
+                _codeVerifier = Utilities.randomDataBase64url(32);
+                string code_challenge = Utilities.base64urlencodeNoPadding(Utilities.sha256(_codeVerifier));
+
+                // Run a local http server on a random port, then launch a web browser for the user to approve our app
+                YouTubeCallbackListener.RunServer();
+                Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&access_type=offline&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}&code_challenge={code_challenge}&code_challenge_method=S256");
+            }
         }
 
         internal static void Invalidate()

@@ -196,16 +196,12 @@
     <Compile Include="Utilities\TaskHelper.cs" />
     <Compile Include="Utilities\Utilities.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Chat\websocket-sharp\doc\.gitignore" />
-    <None Include="Chat\websocket-sharp\doc\doc.sh" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>"$(ProjectDir)..\PluginVersionSetter.exe" "$(ProjectDir)Properties\AssemblyInfo.cs" "$(ProjectDir)Plugin.cs"</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(TargetDir)$(TargetFileName)" "M:\SteamLibrary\steamapps\common\Beat Saber\Plugins"
-copy /Y "$(TargetDir)$(TargetName).xml" "M:\SteamLibrary\steamapps\common\Beat Saber\Plugins"</PostBuildEvent>
+    <PostBuildEvent>copy /Y "$(TargetDir)$(TargetFileName)" "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Plugins"
+copy /Y "$(TargetDir)$(TargetName).xml" "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Plugins"</PostBuildEvent>
   </PropertyGroup>
 </Project>

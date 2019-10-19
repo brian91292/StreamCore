@@ -76,18 +76,15 @@ namespace StreamCore.YouTube
             if(url == "/callback")
             {
                 response.StatusCode = 307;
+                response.Redirect("about:blank");
 
                 // If we successfully exchange our code for an auth token, request a listing of live broadcast info
                 if (YouTubeOAuthToken.Exchange(request.QueryString["code"]))
                 {
-                    // Redirect to our success page
-                    response.Redirect("https://brian91292.dev/youtube/?success");
+                    // Start the YouTubeConnection
                     YouTubeConnection.Start();
                 }
-                else
-                    // Redirect to our error page
-                    response.Redirect("https://brian91292.dev/youtube/?error");
-
+                
                 // Close the response then stop the server
                 response.Close();
                 StopServer();

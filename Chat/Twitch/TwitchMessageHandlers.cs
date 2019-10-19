@@ -204,7 +204,7 @@ namespace StreamCore.Chat
                 case "badges":
                     twitchMsg.user.Twitch.badges = t.Groups["Value"].Value;
                     twitchMsg.user.Twitch.isBroadcaster = twitchMsg.user.Twitch.badges.Contains("broadcaster/");
-                    twitchMsg.user.Twitch.isSub = twitchMsg.user.Twitch.badges.Contains("subscriber/");
+                    twitchMsg.user.Twitch.isSub = twitchMsg.user.Twitch.badges.Contains("subscriber/") || twitchMsg.user.Twitch.badges.Contains("founder/");
                     twitchMsg.user.Twitch.isTurbo = twitchMsg.user.Twitch.badges.Contains("turbo/");
                     twitchMsg.user.Twitch.isMod = twitchMsg.user.Twitch.badges.Contains("moderator/");
                     twitchMsg.user.Twitch.isVip = twitchMsg.user.Twitch.badges.Contains("vip/");

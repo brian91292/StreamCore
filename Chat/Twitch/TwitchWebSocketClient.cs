@@ -457,61 +457,72 @@ namespace StreamCore.Chat
         {
             try
             {
-                var messageType = _twitchMessageRegex.Match(rawMessage);
-                if (messageType.Length == 0)
+                var messageType = _twitchMessageRegex.Matches(rawMessage);
+                if (messageType.Count == 0)
                 {
                     Plugin.Log($"Unhandled message: {rawMessage}");
                     return;
                 }
 
-                if(!messageType.Groups["MessageType"].Success)
+                for (int i = 0; i < messageType.Count; i++)
                 {
-                    Plugin.Log($"Failed to get messageType for message {rawMessage}");
-                    return;
-                }
-                
-                // Instantiate our twitch message
-                TwitchMessage twitchMsg = new TwitchMessage();
-                twitchMsg.user = new TwitchUser();
-                twitchMsg.rawMessage = rawMessage;
-                twitchMsg.messageType = messageType.Groups["MessageType"].Value;
-                twitchMsg.tags = _tagRegex.Matches(rawMessage);
-                if (messageType.Groups["Message"].Success)
-                    twitchMsg.message =  messageType.Groups["Message"].Value;
-                if (messageType.Groups["HostName"].Success)
-                    twitchMsg.hostString = messageType.Groups["HostName"].Value;
-                if (messageType.Groups["ChannelName"].Success)
-                    twitchMsg.channelName = messageType.Groups["ChannelName"].Value;
-
-                // Skip any command messages, as if we're encountering one it came from the StreamCore client and would never be received by other clients (since it's a command)
-                if (twitchMsg.message.StartsWith("/"))
-                    return;
-
-                // If this is a callback from the send function, populate it with our twitch users info/the current room info
-                if (assemblyHash != string.Empty)
-                {
-                    twitchMsg.user = OurTwitchUser;
-                    twitchMsg.hostString = OurTwitchUser.displayName;
-                    Plugin.Log($"Assembly hash is {assemblyHash}");
-                }
-
-                // If the login fails, disconnect the websocket
-                if(twitchMsg.messageType == "NOTICE")
-                {
-                    if (twitchMsg.message.StartsWith("Login authentication failed")) {
-                        Plugin.Log("Invalid Twitch login info! Closing connection!");
-                        LoggedIn = false;
-                        try
+                    try
+                    {
+                        if (!messageType[i].Groups["MessageType"].Success)
                         {
-                            _ws.Close();
+                            Plugin.Log($"Failed to get messageType for message {rawMessage}");
+                            return;
                         }
-                        catch (Exception ex)
+
+                        // Instantiate our twitch message
+                        TwitchMessage twitchMsg = new TwitchMessage();
+                        twitchMsg.user = new TwitchUser();
+                        twitchMsg.rawMessage = rawMessage;
+                        twitchMsg.messageType = messageType[i].Groups["MessageType"].Value;
+                        twitchMsg.tags = _tagRegex.Matches(rawMessage);
+                        if (messageType[i].Groups["Message"].Success)
+                            twitchMsg.message = messageType[i].Groups["Message"].Value;
+                        if (messageType[i].Groups["HostName"].Success)
+                            twitchMsg.hostString = messageType[i].Groups["HostName"].Value;
+                        if (messageType[i].Groups["ChannelName"].Success)
+                            twitchMsg.channelName = messageType[i].Groups["ChannelName"].Value;
+
+                        // Skip any command messages, as if we're encountering one it came from the StreamCore client and would never be received by other clients (since it's a command)
+                        if (twitchMsg.message.StartsWith("/"))
+                            return;
+
+                        // If this is a callback from the send function, populate it with our twitch users info/the current room info
+                        if (assemblyHash != string.Empty)
                         {
-                            Plugin.Log(ex.ToString());
+                            twitchMsg.user = OurTwitchUser;
+                            twitchMsg.hostString = OurTwitchUser.displayName;
+                            Plugin.Log($"Assembly hash is {assemblyHash}");
                         }
+
+                        // If the login fails, disconnect the websocket
+                        if (twitchMsg.messageType == "NOTICE")
+                        {
+                            if (twitchMsg.message.StartsWith("Login authentication failed"))
+                            {
+                                Plugin.Log("Invalid Twitch login info! Closing connection!");
+                                LoggedIn = false;
+                                try
+                                {
+                                    _ws.Close();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Plugin.Log(ex.ToString());
+                                }
+                            }
+                        }
+                        TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
+                    }
+                    catch(Exception ex)
+                    {
+                        Plugin.Log($"An error occurred while parsing message \"{rawMessage}\". {ex.ToString()}");
                     }
                 }
-                TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
             }
             catch (Exception ex)
             {
