@@ -23,6 +23,22 @@ namespace StreamCore.YouTube
                 {
                     Plugin.Log("Initializing!");
 
+                    string ClientIDPath = Path.Combine(Globals.DataPath, "YouTubeClientId.json");
+                    if (!File.Exists(ClientIDPath))
+                    {
+                        Plugin.Log("YouTubeClientId.json does not exist!");
+                        // Client id/secret don't exist, abort
+                        return;
+                    }
+
+                    // Initialize our client id/secret
+                    if(!YouTubeOAuthToken.Initialize(ClientIDPath))
+                    {
+                        Plugin.Log("Something went wrong when trying to read YouTubeClientId.json.");
+                        // Something went wrong when trying to read client id/secret
+                        return;
+                    }
+
                     string tokenPath = Path.Combine(Globals.DataPath, "YouTubeOAuthToken.json");
                     if (!File.Exists(tokenPath))
                     {

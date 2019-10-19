@@ -39,6 +39,9 @@ namespace StreamCore
             if (Instance != null) return;
             Instance = this;
 
+           
+            SharedMonoBehaviour.StartCoroutine(TwitchMessageHandler.InitializeMessageHandlers());
+
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;
         }

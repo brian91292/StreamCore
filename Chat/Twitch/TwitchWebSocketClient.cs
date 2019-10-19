@@ -90,29 +90,15 @@ namespace StreamCore.Chat
         private static int _messageLimit { get => (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch 
         private static ConcurrentQueue<string> _sendQueue = new ConcurrentQueue<string>();
         
-        /// <summary>
-        /// Call this function once OnApplicationStart if you intend to use the Twitch chat API
-        /// </summary>
-        public static void Initialize()
+        internal static void Initialize_Internal()
         {
             if (Initialized)
                 return;
 
-            TwitchMessageHandlers.Initialize();
-
-            // Stop config updated callback when we haven't switched channels
             _lastChannel = TwitchLoginConfig.Instance.TwitchChannelName;
-
             TwitchLoginConfig.Instance.ConfigChangedEvent += Instance_ConfigChangedEvent;
-
             Initialized = true;
-
-            Task.Run(() =>
-            {
-                // Sleep for a second before connecting, to allow for other plugins to register their callbacks incase they depend on a connected callback or something
-                Thread.Sleep(1000);
-                Connect();
-            });
+            Task.Run(() => Connect());
         }
 
         private static void Instance_ConfigChangedEvent(TwitchLoginConfig obj)
@@ -516,7 +502,7 @@ namespace StreamCore.Chat
                                 }
                             }
                         }
-                        TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
+                        TwitchMessageHandler.InvokeRegisteredCallbacks(twitchMsg, assemblyHash);
                     }
                     catch(Exception ex)
                     {

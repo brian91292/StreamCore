@@ -33,45 +33,45 @@ namespace StreamCore.YouTube
 
         internal static bool isExpired { get => expireTime <= DateTime.UtcNow.Subtract(new TimeSpan(0, 1, 0)); }
         
+        internal static bool Initialize(string ClientIdSecretPath)
+        {
+            try
+            {
+                // Parse the credentials into a JSON document
+                JSONNode OAuthJSON = JSON.Parse(File.ReadAllText(ClientIdSecretPath));
+                if (OAuthJSON == null)
+                {
+                    Plugin.Log("OAuthJSON was null!");
+                    return false;
+                }
+
+                // Make sure the installed object is present- this indicates the user created the right type of credentials
+                if (!OAuthJSON["installed"].IsObject)
+                {
+                    Plugin.Log("Missing \"installed\" section from YouTubeOAuth.json! Aborting!");
+                    return false;
+                }
+
+                // Try to parse out the client id and client secret
+                _clientId = OAuthJSON["installed"]["client_id"].Value;
+                _clientSecret = OAuthJSON["installed"]["client_secret"].Value;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log($"An error occurred while trying to parse YouTubeOAuth.json. {ex.ToString()}");
+                return false;
+            }
+        }
+
         internal static void Generate()
         {
-            string OAuthPath = Path.Combine(Globals.DataPath, "YouTubeClientId.json");
-            if (File.Exists(OAuthPath))
-            {
-                try
-                {
-                    // Parse the credentials into a JSON document
-                    JSONNode OAuthJSON = JSON.Parse(File.ReadAllText(OAuthPath));
-                    if(OAuthJSON == null)
-                    {
-                        Plugin.Log("OAuthJSON was null!");
-                        return;
-                    }
+            _codeVerifier = Utilities.randomDataBase64url(32);
+            string code_challenge = Utilities.base64urlencodeNoPadding(Utilities.sha256(_codeVerifier));
 
-                    // Make sure the installed object is present- this indicates the user created the right type of credentials
-                    if(!OAuthJSON["installed"].IsObject)
-                    {
-                        Plugin.Log("Missing \"installed\" section from YouTubeOAuth.json! Aborting!");
-                        return;
-                    }
-
-                    // Try to parse out the client id and client secret
-                    _clientId = OAuthJSON["installed"]["client_id"].Value;
-                    _clientSecret = OAuthJSON["installed"]["client_secret"].Value;
-                }
-                catch(Exception ex)
-                {
-                    Plugin.Log($"An error occurred while trying to parse YouTubeOAuth.json. {ex.ToString()}");
-                    return;
-                }
-
-                _codeVerifier = Utilities.randomDataBase64url(32);
-                string code_challenge = Utilities.base64urlencodeNoPadding(Utilities.sha256(_codeVerifier));
-
-                // Run a local http server on a random port, then launch a web browser for the user to approve our app
-                YouTubeCallbackListener.RunServer();
-                Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&access_type=offline&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}&code_challenge={code_challenge}&code_challenge_method=S256");
-            }
+            // Run a local http server on a random port, then launch a web browser for the user to approve our app
+            YouTubeCallbackListener.RunServer();
+            Process.Start($"https://accounts.google.com/o/oauth2/v2/auth?client_id={_clientId}&access_type=offline&redirect_uri={_redirectUrl}&response_type=code&scope={_requestedScope}&code_challenge={code_challenge}&code_challenge_method=S256");
         }
 
         internal static void Invalidate()
