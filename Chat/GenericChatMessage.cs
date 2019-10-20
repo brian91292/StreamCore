@@ -1,4 +1,5 @@
-﻿using StreamCore.YouTube;
+﻿using StreamCore.Twitch;
+using StreamCore.YouTube;
 using System;
 using System.Collections.Generic;
 using System.Linq;

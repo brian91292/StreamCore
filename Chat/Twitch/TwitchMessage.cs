@@ -1,4 +1,5 @@
-﻿using StreamCore.SimpleJSON;
+﻿using StreamCore.Chat;
+using StreamCore.SimpleJSON;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace StreamCore.Chat
+namespace StreamCore.Twitch
 {
     public class TwitchMessage : GenericChatMessage
     {

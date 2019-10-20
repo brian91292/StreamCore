@@ -1,4 +1,5 @@
-﻿using System;
+﻿using StreamCore.Chat;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace StreamCore.Chat
+namespace StreamCore.Twitch
 {
     /// <summary>
     /// <para>This interface defines the main conduit through which Twitch events will be sent into your mod. </para>
@@ -66,7 +67,7 @@ namespace StreamCore.Chat
         Action<TwitchMessage> Twitch_OnJoinReceived { get; set; }
     }
 
-    internal class TwitchMessageHandler : GenericMessageHandler<ITwitchMessageHandler>
+    internal class TwitchMessageHandler : GenericMessageHandlerWrapper<ITwitchMessageHandler>
     {
         private static TwitchMessageHandler _instance = null;
         internal static TwitchMessageHandler Instance

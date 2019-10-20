@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
-namespace StreamCore.Chat
+namespace StreamCore.Twitch
 {
     /// <summary>
     /// The main Twitch websocket client.
