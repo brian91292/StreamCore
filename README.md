@@ -42,6 +42,13 @@ From the Credentials tab, click on the new OAuth credential you just created. Yo
 Rename the JSON file you just downloaded to `YouTubeClientId.json` and copy it into the StreamCore config folder. 
 
 ### Step 6
+Now that we've got our OAuth credential, we need to enable the YouTube Data APIv3. To do this, head over to the [Google API Library](https://console.developers.google.com/apis/library).
+
+### Step 7
+Search for the "YouTube Data API v3" and click on it, then click "Enable".
+![Library](https://i.imgur.com/ZT8eezQ.png)
+
+### Step 8
 Start up the game and a browser window should popup with the Google OAuth consent screen asking you to approve access to your account. After granting approval, StreamCore will automatically start reading chat from your live broadcast.
 
 
