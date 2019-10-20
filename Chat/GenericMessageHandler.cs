@@ -122,12 +122,7 @@ namespace StreamCore.Chat
                     }
                     catch (ReflectionTypeLoadException ex)
                     {
-                        // now look at ex.LoaderExceptions - this is an Exception[], so:
-                        foreach (Exception inner in ex.LoaderExceptions)
-                        {
-                            // write details of "inner", in particular inner.Message
-                            Plugin.Log($"Inner: {inner.Message}");
-                        }
+                        // Ignore any ReflectionTypeLoadExceptions and continue
                     }
                 }
             }
