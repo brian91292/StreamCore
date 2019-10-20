@@ -13,7 +13,7 @@ namespace StreamCore.Chat
 {
     /// <summary>
     /// <para>This interface defines the main conduit through which YouTube events will be sent into your mod. </para>
-    /// <br>Any class that implements IYouTubeMessageHandler will be *automatically* instantiated!</br> DO NOT MANUALLY INSTANTIATE AN INSTANCE <br>OF ANY CLASS THAT IMPLEMENTS IYouTubeMessageHandler, as it won't work!</br>
+    /// Any class that implements IYouTubeMessageHandler will be *automatically* instantiated! Do not manually instantiate any instance of any class IYouTubeMessageHandler, as it won't receive the callbacks!
     /// <para>Additionally, if your class extends MonoBehaviour, make sure to call DontDestroyOnLoad on the newly created object if you don't want it to be destroyed when the scene switches :)</para>
     /// </summary>
     public interface IYouTubeMessageHandler : IGenericMessageHandler

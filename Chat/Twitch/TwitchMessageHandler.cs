@@ -13,7 +13,7 @@ namespace StreamCore.Twitch
 {
     /// <summary>
     /// <para>This interface defines the main conduit through which Twitch events will be sent into your mod. </para>
-    /// <br>Any class that implements ITwitchMessageHandler will be *automatically* instantiated!</br> DO NOT MANUALLY INSTANTIATE AN INSTANCE <br>OF ANY CLASS THAT IMPLEMENTS ITwitchMessageHandler, as it won't work!</br>
+    /// Any class that implements ITwitchMessageHandler will be *automatically* instantiated! Do not manually instantiate any instance of any class ITwitchMessageHandler, as it won't receive the callbacks!
     /// <para>Additionally, if your class extends MonoBehaviour, make sure to call DontDestroyOnLoad on the newly created object if you don't want it to be destroyed when the scene switches :)</para>
     /// </summary>
     public interface ITwitchMessageHandler : IGenericMessageHandler
