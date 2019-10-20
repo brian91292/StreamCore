@@ -14,7 +14,7 @@ namespace StreamCore.YouTube
     public class YouTubeConnection
     {
         internal static bool initialized = false;
-        public static void Initialize()
+        internal static void Initialize_Internal()
         {
             if (!initialized)
             {

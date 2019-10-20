@@ -113,7 +113,6 @@ namespace StreamCore.Chat
                         PartChannel(_lastChannel);
                     if (TwitchLoginConfig.Instance.TwitchChannelName != String.Empty)
                         JoinChannel(TwitchLoginConfig.Instance.TwitchChannelName);
-                    ConnectionTime = DateTime.Now;
 
                     // Invoke OnTwitchChannelUpdated event
                     if(OnTwitchChannelUpdated != null)

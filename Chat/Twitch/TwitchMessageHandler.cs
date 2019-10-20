@@ -15,13 +15,8 @@ namespace StreamCore.Chat
     /// <br>Any class that implements ITwitchMessageHandler will be *automatically* instantiated!</br> DO NOT MANUALLY INSTANTIATE AN INSTANCE <br>OF ANY CLASS THAT IMPLEMENTS ITwitchMessageHandler, as it won't work!</br>
     /// <para>Additionally, if your class extends MonoBehaviour, make sure to call DontDestroyOnLoad on the newly created object if you don't want it to be destroyed when the scene switches :)</para>
     /// </summary>
-    public interface ITwitchMessageHandler
+    public interface ITwitchMessageHandler : IGenericMessageHandler
     {
-        /// <summary>
-        /// Set this variable to true after registering all your Twitch callbacks and initializing any required dependencies for those callbacks. StreamCore will not connect to Twitch until this property has been set to true.
-        /// </summary>
-        bool TwitchCallbacksReady { get; set; }
-
         /// <summary>
         /// Twitch PRIVMSG event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
@@ -71,111 +66,65 @@ namespace StreamCore.Chat
         Action<TwitchMessage> Twitch_OnJoinReceived { get; set; }
     }
 
-    internal static class TwitchMessageHandler
+    internal class TwitchMessageHandler : GenericMessageHandler<ITwitchMessageHandler>
     {
-        internal static ConcurrentDictionary<string, ITwitchMessageHandler> messageHandlers = new ConcurrentDictionary<string, ITwitchMessageHandler>();
-
-        // Scan all loaded assemblies and try to find any types that implement ITwitchMessageHandler
-        internal static IEnumerator InitializeMessageHandlers()
+        private static TwitchMessageHandler _instance = null;
+        internal static TwitchMessageHandler Instance
         {
-            foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+            get
             {
-                string assemblyHash = a.GetHashCode().ToString();
-                foreach (Type t in a.GetTypes())
+                if (_instance == null)
                 {
-                    // Type doesn't extend ITwitchMessageHandler, continue
-                    if (typeof(ITwitchMessageHandler) == t || !typeof(ITwitchMessageHandler).IsAssignableFrom(t))
-                        continue;
-
-                    Plugin.Log($"Found TwitchMessageHandler of type {t.Name} from assembly {a.GetName()}");
-
-                    // Determine how to go about instantiating the object
-                    if (t.IsSubclassOf(typeof(MonoBehaviour)))
-                    {
-                        messageHandlers[assemblyHash] = (ITwitchMessageHandler)new GameObject(t.Name + "_Instance").AddComponent(t);
-                    }
-                    else
-                    {
-                        messageHandlers[assemblyHash] = (ITwitchMessageHandler)Activator.CreateInstance(t);
-                    }
+                    _instance = new TwitchMessageHandler();
                 }
-            }
-
-            // Wait for all the registered assemblies to be ready
-            foreach (var handler in messageHandlers)
-            {
-                if (!handler.Value.TwitchCallbacksReady)
-                {
-                    Plugin.Log($"Assembly with hash {handler.Key} wasn't ready! Waiting until it is...");
-                    yield return new WaitUntil(() => handler.Value.TwitchCallbacksReady);
-                    Plugin.Log($"Assembly with hash {handler.Key} wasn't ready! Waiting until it is...");
-                }
-            }
-            if(messageHandlers.Count > 0)
-            {
-                TwitchWebSocketClient.Initialize_Internal();
+                return _instance;
             }
         }
 
         internal static void InvokeRegisteredCallbacks(TwitchMessage message, string assemblyHash)
         {
-            foreach(var handler in messageHandlers)
+            foreach(var handler in Instance.messageHandlers)
             {
-                // Don't invoke the callback if the message was sent by the assembly that the current handler belongs to
-                if (handler.Key == assemblyHash)
-                    continue;
-
-                try
+                foreach (var instance in handler.Value)
                 {
-                    switch (message.messageType)
+                    // Don't invoke the callback if the message was sent by the assembly that the current handler belongs to
+                    if (handler.Key == assemblyHash)
+                        continue;
+
+                    try
                     {
-                        case "PRIVMSG":
-                            Twitch_OnPrivmsgReceived(handler.Value, message);
-                            break;
-                        case "ROOMSTATE":
-                            Twitch_OnRoomstateReceived(handler.Value, message);
-                            break;
-                        case "USERNOTICE":
-                            Twitch_OnUsernoticeReceived(handler.Value, message);
-                            break;
-                        case "USERSTATE":
-                            Twitch_OnUserstateReceived(handler.Value, message);
-                            break;
-                        case "CLEARCHAT":
-                            Twitch_OnClearchatReceived(handler.Value, message);
-                            break;
-                        case "CLEARMSG":
-                            Twitch_OnClearmsgReceived(handler.Value, message);
-                            break;
-                        case "MODE":
-                            Twitch_OnModeReceived(handler.Value, message);
-                            break;
-                        case "JOIN":
-                            Twitch_OnJoinReceived(handler.Value, message);
-                            break;
+                        switch (message.messageType)
+                        {
+                            case "PRIVMSG":
+                                Twitch_OnPrivmsgReceived(instance.Value, message);
+                                break;
+                            case "ROOMSTATE":
+                                Twitch_OnRoomstateReceived(instance.Value, message);
+                                break;
+                            case "USERNOTICE":
+                                Twitch_OnUsernoticeReceived(instance.Value, message);
+                                break;
+                            case "USERSTATE":
+                                Twitch_OnUserstateReceived(instance.Value, message);
+                                break;
+                            case "CLEARCHAT":
+                                Twitch_OnClearchatReceived(instance.Value, message);
+                                break;
+                            case "CLEARMSG":
+                                Twitch_OnClearmsgReceived(instance.Value, message);
+                                break;
+                            case "MODE":
+                                Twitch_OnModeReceived(instance.Value, message);
+                                break;
+                            case "JOIN":
+                                Twitch_OnJoinReceived(instance.Value, message);
+                                break;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log(ex.ToString());
-                }
-            }
-        }
-
-        private static void SafeInvokeAction(Action<TwitchMessage> action, TwitchMessage message)
-        {
-            if (action == null)
-                return;
-
-            foreach (var a in action.GetInvocationList())
-            {
-                try
-                {
-                    a?.DynamicInvoke(message);
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Log(ex.ToString());
+                    catch (Exception ex)
+                    {
+                        Plugin.Log(ex.ToString());
+                    }
                 }
             }
         }

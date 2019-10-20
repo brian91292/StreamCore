@@ -34,13 +34,41 @@ namespace StreamCore
                 Console.WriteLine($"{ModuleName}::{Path.GetFileName(file)}->{member}({line}): {text}");
         }
 
+        private IEnumerator InitMessageHandlers()
+        {
+            TwitchMessageHandler.Instance.InitializeMessageHandlers();
+            YouTubeMessageHandler.Instance.InitializeMessageHandlers();
+
+            foreach (var instance in GenericMessageHandler<IGenericMessageHandler>.registeredInstances)
+            {
+                var instanceType = instance.Value.GetType();
+                var typeName = instanceType.Name;
+
+                // Wait for all the registered assemblies to be ready
+                if (!instance.Value.ChatCallbacksReady)
+                {
+                    Log($"Instance of type {typeName} wasn't ready! Waiting until it is...");
+                    yield return new WaitUntil(() => instance.Value.ChatCallbacksReady);
+                    Log($"Instance of type {typeName} is ready!");
+                }
+                if (typeof(ITwitchMessageHandler).IsAssignableFrom(instanceType))
+                {
+                    TwitchWebSocketClient.Initialize_Internal();
+                }
+                if (typeof(IYouTubeMessageHandler).IsAssignableFrom(instanceType))
+                {
+                    YouTubeConnection.Initialize_Internal();
+                }
+            }
+            
+        }
+
         public void OnApplicationStart()
         {
             if (Instance != null) return;
             Instance = this;
 
-           
-            SharedMonoBehaviour.StartCoroutine(TwitchMessageHandler.InitializeMessageHandlers());
+            SharedMonoBehaviour.StartCoroutine(InitMessageHandlers());
 
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;
