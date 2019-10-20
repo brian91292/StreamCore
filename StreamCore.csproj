@@ -190,7 +190,7 @@
     <Compile Include="Globals.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TwitchAPI.cs" />
+    <Compile Include="Chat\Twitch\TwitchAPI.cs" />
     <Compile Include="Chat\YouTube\YouTubeCallbackListener.cs" />
     <Compile Include="Utilities\ObjectPool.cs" />
     <Compile Include="Utilities\ReflectionUtil.cs" />

@@ -22,51 +22,7 @@ namespace StreamCore.Chat
     
     internal class GenericMessageHandlerWrapper<T> where T : IGenericMessageHandler
     {
-        private static Dictionary<Type, IGenericMessageHandler> registeredInstances = new Dictionary<Type, IGenericMessageHandler>();
         internal ConcurrentDictionary<string, Dictionary<Type, T>> messageHandlers = new ConcurrentDictionary<string, Dictionary<Type, T>>();
-
-        internal static IEnumerator CreateGlobalMessageHandlers()
-        {
-            // Attempt to initialize message handlers for each of our chat services
-            TwitchMessageHandler.Instance.InitializeMessageHandlers();
-            YouTubeMessageHandler.Instance.InitializeMessageHandlers();
-
-            bool initTwitch = false, initYouTube = false;
-            // Iterate through all the message handlers that were registered
-            foreach (var instance in GenericMessageHandler.registeredInstances)
-            {
-                var instanceType = instance.Value.GetType();
-                var typeName = instanceType.Name;
-
-                // Wait for all the registered handlers to be ready
-                if (!instance.Value.ChatCallbacksReady)
-                {
-                    Plugin.Log($"Instance of type {typeName} wasn't ready! Waiting until it is...");
-                    yield return new WaitUntil(() => instance.Value.ChatCallbacksReady);
-                    Plugin.Log($"Instance of type {typeName} is ready!");
-                }
-
-                // Mark the correct services for initialization based on type
-                if (typeof(ITwitchMessageHandler).IsAssignableFrom(instanceType))
-                {
-                    initTwitch = true;
-                }
-                if (typeof(IYouTubeMessageHandler).IsAssignableFrom(instanceType))
-                {
-                    initYouTube = true;
-                }
-            }
-
-            // Initialize the appropriate streaming services
-            if (initTwitch)
-            {
-                TwitchWebSocketClient.Initialize_Internal();
-            }
-            if (initYouTube)
-            {
-                YouTubeConnection.Initialize_Internal();
-            }
-        }
 
         // Scan all loaded assemblies and try to find any types that implement ITwitchMessageHandler
         internal void InitializeMessageHandlers()
@@ -146,6 +102,52 @@ namespace StreamCore.Chat
             }
         }
     }
-    // Used to access static variables of the GenericMessageHandler class 
-    internal class GenericMessageHandler : GenericMessageHandlerWrapper<IGenericMessageHandler> { }
+
+    // Simply used to store a collection of all the registered instances.
+    class GenericMessageHandler 
+    { 
+        internal static Dictionary<Type, IGenericMessageHandler> registeredInstances = new Dictionary<Type, IGenericMessageHandler>();
+        internal static IEnumerator CreateGlobalMessageHandlers()
+        {
+            // Attempt to initialize message handlers for each of our chat services
+            TwitchMessageHandler.Instance.InitializeMessageHandlers();
+            YouTubeMessageHandler.Instance.InitializeMessageHandlers();
+
+            bool initTwitch = false, initYouTube = false;
+            // Iterate through all the message handlers that were registered
+            foreach (var instance in GenericMessageHandler.registeredInstances)
+            {
+                var instanceType = instance.Value.GetType();
+                var typeName = instanceType.Name;
+
+                // Wait for all the registered handlers to be ready
+                if (!instance.Value.ChatCallbacksReady)
+                {
+                    Plugin.Log($"Instance of type {typeName} wasn't ready! Waiting until it is...");
+                    yield return new WaitUntil(() => instance.Value.ChatCallbacksReady);
+                    Plugin.Log($"Instance of type {typeName} is ready!");
+                }
+
+                // Mark the correct services for initialization based on type
+                if (typeof(ITwitchMessageHandler).IsAssignableFrom(instanceType))
+                {
+                    initTwitch = true;
+                }
+                if (typeof(IYouTubeMessageHandler).IsAssignableFrom(instanceType))
+                {
+                    initYouTube = true;
+                }
+            }
+
+            // Initialize the appropriate streaming services
+            if (initTwitch)
+            {
+                TwitchWebSocketClient.Initialize_Internal();
+            }
+            if (initYouTube)
+            {
+                YouTubeConnection.Initialize_Internal();
+            }
+        }
+    }
 }

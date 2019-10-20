@@ -16,15 +16,13 @@ namespace StreamCore
 {
     public class Plugin : IPlugin
     {
+        public static Plugin Instance { get; private set; }
+        private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
         public static readonly string ModuleName = "Stream Core";
-
         public string Name => ModuleName;
         public string Version => "2.0.0";
-
-        public static Plugin Instance { get; private set; }
         
-        private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
-
+        
         private static readonly object _loggerLock = new object();
         public static void Log(string text,
                 [CallerFilePath] string file = "",
