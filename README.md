@@ -1,8 +1,11 @@
 # Mod Info
-StreamCore is an IPA based mod designed to allow developers to create interactive chat experiences with ease.
+StreamCore is an IPA based mod designed to allow developers to create interactive chat experiences with ease. At the time of writing StreamCore supports Twitch and YouTube.
 
-# Config
-Config files can be found in the `UserData\StreamCore` folder.
+# Config File
+Config files can be found in the `UserData\StreamCore` folder. This folder will be referenced as the `config folder` for the remainder of this readme.
+
+# Twitch Config
+Twitch configuration is very straightforward, click the link below to generate an OAuth token and copy it into the Twitch login file described below.
 
 ### TwitchLoginInfo.ini
 | Option | Description |
@@ -11,10 +14,96 @@ Config files can be found in the `UserData\StreamCore` folder.
 | **TwitchUsername** | Your twitch username for the account you want to send messages as in chat (only matters if you're using the request bot) |
 | **TwitchOAuthToken** | The oauth token corresponding to the TwitchUsername entered above ([Click here to generate an oauth token](https://twitchapps.com/tmi/))  |
 
+# YouTube Config
 
-# Basic Implementation (for devs)
+## Important Info About the YouTube API
+YouTube configuration is not so straightforward. It also isn't good for longer streams since the YouTube API is absolutely terrible and uses your YouTube APIv3 data quota to *read the chat*. 
+
+What this means in layman's terms is that in a given day, you'll only be able to use StreamCore for about ~2 ish hours before you run out of quota. Sorry about this, I'll be implementing a way to use multiple sets of auth info in the future to "fix" this.
+
+## YouTube Setup Instructions
+### Step 1
+First, head over to the [Google Developer API Console](https://console.developers.google.com), and if you don't have one already create a project. It doesn't matter what you name this project, but I would name it something related to StreamCore.
+
+### Step 2
+After you've created a project, click on the Credentials tab on the left and click the "create credentials" button, then click "OAuth client ID"
+
+![Credentials](https://i.imgur.com/bE8HPzc.png)
+
+### Step 3
+Select application type "other" and enter a name, then click "Create".
+![Credentials](https://i.imgur.com/m9ueTKI.png)
+
+### Step 4
+From the Credentials tab, click on the new OAuth credential you just created. You should see a screen with the client id/client secret for the OAuth credential you just created, click the "Download JSON" button and save it to your computer.
+![OAuth](https://i.imgur.com/5yJInIR.png)
+
+### Step 5
+Rename the JSON file you just downloaded to `YouTubeClientId.json` and copy it into the StreamCore config folder. 
+
+### Step 6
+Start up the game and a browser window should popup with the Google OAuth consent screen asking you to approve access to your account. After granting approval, StreamCore will automatically start reading chat from your live broadcast.
+
+
+# Basic StreamCore Implementation (for devs)
 Implementing StreamCore into your plugin is very simple, and can be accomplished in just a few steps.
 
+## StreamCore version 2.x (Current Version)
+### Step 1
+Implement `ITwitchMessageHandler` or `IYouTubeMessageHandler` into the class which you want to receive the chat callbacks
+
+**Note:** StreamCore will automatically instantiate instances of any classes that implement an `IGenericMessageHandler` in OnApplicationStart, so make sure you don't instantiate these classes anywhere in your own code!
+
+### Step 2
+Setup the chat message callbacks that were defined by the interface you implemented above.
+
+### Step 3
+After you have setup the chat message callbacks and your class is ready, set the `ChatCallbacksReady` property to `true` (this is part of the `IGenericMessageHandler` interface, so you'll see what I mean once you do step 1).
+
+**Note:** As long as `ChatCallbacksReady` is set to false, StreamCore will not try to establish a connection to any chat services. This means you can effectively block StreamCore from establishing any chat connections for as long as you need until your class is ready.
+
+### Example
+```cs+
+using StreamCore;
+using StreamCore.Chat;
+using StreamCore.YouTube;
+using StreamCore.Twitch;
+
+namespace YourModsNamespace
+{
+    public class ChatMessageHandler : MonoBehaviour, ITwitchMessageHandler, IYouTubeMessageHandler 
+    {
+        public bool ChatCallbacksReady { get; set; } = false;
+        public Action<TwitchMessage> Twitch_OnPrivmsgReceived { get; set; }
+        public Action<TwitchMessage> Twitch_OnRoomstateReceived { get; set;  }
+        public Action<TwitchMessage> Twitch_OnUsernoticeReceived { get; set;  }
+        public Action<TwitchMessage> Twitch_OnUserstateReceived { get; set;  }
+        public Action<TwitchMessage> Twitch_OnClearchatReceived { get; set;  }
+        public Action<TwitchMessage> Twitch_OnClearmsgReceived { get; set;  }
+        public Action<TwitchMessage> Twitch_OnModeReceived { get; set;  }
+        public Action<TwitchMessage> Twitch_OnJoinReceived { get; set;  }
+        public Action<YouTubeMessage> YouTube_OnMessageReceived { get; set; }
+        
+        public void Awake()
+        {
+            // Setup chat message callbacks
+            Twitch_OnPrivmsgReceived += (twitchMsg) => {
+                // do stuff with twitchMsg here
+            };
+            
+            YouTube_OnMessageReceived += (youtubeMsg) => {
+                // do stuff with youtubeMsg here
+            };
+            
+            // Signal to StreamCore that this class is ready to receive chat callbacks
+            ChatCallbacksReady = true;
+        }
+    }
+}
+```
+
+
+## StreamCore versions < 2.0 (Old/Legacy Version)
 ### Step 1
 Initialize StreamCore in `OnApplicationStart`
 
