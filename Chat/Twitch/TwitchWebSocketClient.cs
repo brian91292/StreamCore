@@ -98,7 +98,10 @@ namespace StreamCore.Twitch
             _lastChannel = TwitchLoginConfig.Instance.TwitchChannelName;
             TwitchLoginConfig.Instance.ConfigChangedEvent += Instance_ConfigChangedEvent;
             Initialized = true;
-            Task.Run(() => Connect());
+            Task.Run(() => {
+                Thread.Sleep(1000);
+                Connect();
+            });
         }
 
         private static void Instance_ConfigChangedEvent(TwitchLoginConfig obj)
@@ -442,6 +445,7 @@ namespace StreamCore.Twitch
         {
             try
             {
+                //Plugin.Log($"RawMsg: {rawMessage}");
                 var matches = _twitchMessageRegex.Matches(rawMessage);
                 if (matches.Count == 0)
                 {

@@ -18,8 +18,39 @@ using System.Security.Cryptography;
 
 namespace StreamCore.Utils
 {
-    public class Utilities
+    public static class Utilities
     {
+        static char[] unicodeSpaceChars = null;
+        public static bool IsUnicodeWhitespace(char ch)
+        {
+            if (unicodeSpaceChars == null)
+            {
+                var chars = new List<char>();
+                chars.Add('\u1280');
+                chars.Add('\u180e');
+                chars.Add('\u202f');
+                chars.Add('\u205f');
+                chars.Add('\u3000');
+                chars.Add('\ufeff');
+                for (char c = '\u2000'; c < '\u200b'; c++)
+                    chars.Add(c);
+                unicodeSpaceChars = chars.ToArray();
+            }
+            return unicodeSpaceChars.Contains(ch);
+        }
+
+        public static bool IsAllWhitespace(this string str)
+        {
+            foreach(char c in str)
+            {
+                if(!Char.IsWhiteSpace(c) && !IsUnicodeWhitespace(c))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         public static void EmptyDirectory(string directory, bool delete = true)
         {
             if (Directory.Exists(directory))

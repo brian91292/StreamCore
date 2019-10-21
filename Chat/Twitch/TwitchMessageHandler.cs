@@ -228,6 +228,9 @@ namespace StreamCore.Twitch
 
         internal static void Twitch_OnRoomstateReceived(ITwitchMessageHandler handler, TwitchMessage twitchMsg)
         {
+            if (!TwitchWebSocketClient.ChannelInfo.ContainsKey(twitchMsg.channelName))
+                TwitchWebSocketClient.ChannelInfo.Add(twitchMsg.channelName, new TwitchChannel(twitchMsg.channelName));
+
             ParseRoomstateTags(twitchMsg.tags, twitchMsg.channelName);
             var channel = TwitchWebSocketClient.ChannelInfo[twitchMsg.channelName];
             if (channel.rooms == null)
@@ -265,10 +268,6 @@ namespace StreamCore.Twitch
 
         internal static void Twitch_OnJoinReceived(ITwitchMessageHandler handler, TwitchMessage twitchMsg)
         {
-            if (!TwitchWebSocketClient.ChannelInfo.ContainsKey(twitchMsg.channelName))
-                TwitchWebSocketClient.ChannelInfo.Add(twitchMsg.channelName, new TwitchChannel(twitchMsg.channelName));
-
-            Plugin.Log($"Success joining channel #{twitchMsg.channelName}");
             SafeInvokeAction(handler.Twitch_OnJoinReceived, twitchMsg);
         }
     }
