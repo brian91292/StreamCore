@@ -20,18 +20,106 @@ namespace StreamCore.Chat
         bool ChatCallbacksReady { get; set; }
     }
 
-    class GenericMessageHandler
+    public enum GlobalMessageTypes
+    {
+        OnMessageReceived,
+        OnSingleMessageDeleted,
+        OnAllMessagesDeleted
+    }
+
+    public interface IGlobalMessageHandler : IGenericMessageHandler
+    {
+        /// <summary>
+        /// Global message handler for text chat events
+        /// </summary>
+        Action<GenericChatMessage> Global_OnMessageReceived { get; set; }
+
+        /// <summary>
+        /// Global message handler for message deleted events
+        /// </summary>
+        Action<GenericChatMessage> Global_OnSingleMessageDeleted { get; set; }
+
+        /// <summary>
+        /// Global message handler for when all of a users messages are deleted
+        /// </summary>
+        Action<GenericChatMessage> Global_OnAllMessagesDeleted { get; set; }
+    }
+
+    /// <summary>
+    /// Global handler for all supported chat clients
+    /// </summary>
+    public class GlobalMessageHandler : GlobalMessageHandlerWrapper<IGlobalMessageHandler>
     {
         internal static Dictionary<Type, IGenericMessageHandler> registeredInstances = new Dictionary<Type, IGenericMessageHandler>();
+        private static GlobalMessageHandler _instance = null;
+        internal static GlobalMessageHandler Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new GlobalMessageHandler();
+                }
+                return _instance;
+            }
+        }
+
+        /// <summary>
+        /// Sends a message to all connected chat clients
+        /// </summary>
+        /// <param name="message">The message to be sent.</param>
+        public static void SendMessage(string message)
+        {
+            if (YouTubeConnection.initialized && YouTubeLiveBroadcast.currentBroadcast != null)
+            {
+                YouTubeLiveChat.SendMessage(message);
+            }
+            if (TwitchWebSocketClient.Initialized && TwitchWebSocketClient.IsChannelValid)
+            {
+                TwitchWebSocketClient.SendMessage(message);
+            }
+        }
+
+        internal static void InvokeRegisteredCallbacks(GlobalMessageTypes type, GenericChatMessage message, string assemblyHash)
+        {
+            foreach (var handler in Instance.messageHandlers)
+            {
+                foreach (var instance in handler.Value)
+                {
+                    // Don't invoke the callback if the message was sent by the assembly that the current handler belongs to
+                    if (handler.Key == assemblyHash)
+                        continue;
+
+                    switch(type)
+                    {
+                        case GlobalMessageTypes.OnMessageReceived:
+                            instance.Value.Global_OnMessageReceived(message);
+                            break;
+                        case GlobalMessageTypes.OnSingleMessageDeleted:
+                            instance.Value.Global_OnSingleMessageDeleted(message);
+                            break;
+                        case GlobalMessageTypes.OnAllMessagesDeleted:
+                            instance.Value.Global_OnAllMessagesDeleted(message);
+                            break;
+                        default:
+                            Plugin.Log($"Unhandled message type {type.ToString()}");
+                            break;
+                    }
+                    
+                }
+            }
+        }
+
         internal static IEnumerator CreateGlobalMessageHandlers()
         {
             // Attempt to initialize message handlers for each of our chat services
             TwitchMessageHandler.Instance.InitializeMessageHandlers();
             YouTubeMessageHandler.Instance.InitializeMessageHandlers();
+            GlobalMessageHandler.Instance.InitializeMessageHandlers();
 
             bool initTwitch = false, initYouTube = false;
             // Iterate through all the message handlers that were registered
-            foreach (var instance in GenericMessageHandler.registeredInstances)
+            foreach (var instance in GlobalMessageHandler.registeredInstances)
             {
                 var instanceType = instance.Value.GetType();
                 var typeName = instanceType.Name;
@@ -53,6 +141,11 @@ namespace StreamCore.Chat
                 {
                     initYouTube = true;
                 }
+                if(typeof(IGlobalMessageHandler).IsAssignableFrom(instanceType))
+                {
+                    initTwitch = true;
+                    initYouTube = true;
+                }
             }
 
             // Initialize the appropriate streaming services
@@ -67,7 +160,11 @@ namespace StreamCore.Chat
         }
     }
 
-    internal class GenericMessageHandlerWrapper<T> where T : IGenericMessageHandler
+    /// <summary>
+    /// An internal wrapper for the IGenericMessageHandler interface
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class GlobalMessageHandlerWrapper<T> where T : IGenericMessageHandler
     {
         internal ConcurrentDictionary<string, Dictionary<Type, T>> messageHandlers = new ConcurrentDictionary<string, Dictionary<Type, T>>();
 
@@ -98,7 +195,7 @@ namespace StreamCore.Chat
 
                         bool foundExistingInstance = false;
                         // If any other message handler has already instantiated an instance of this type, use that instance
-                        if(GenericMessageHandler.registeredInstances.TryGetValue(t, out var instance))
+                        if(GlobalMessageHandler.registeredInstances.TryGetValue(t, out var instance))
                         {
                             messageHandlers[assemblyHash][t] = (T)instance;
                             Plugin.Log($"Reusing existing instance for type {t.Name}");
@@ -119,7 +216,7 @@ namespace StreamCore.Chat
                             {
                                 messageHandlers[assemblyHash][t] = (T)Activator.CreateInstance(t);
                             }
-                            GenericMessageHandler.registeredInstances.Add(t, messageHandlers[assemblyHash][t]);
+                            GlobalMessageHandler.registeredInstances.Add(t, messageHandlers[assemblyHash][t]);
                         }
                     }
                     catch (ReflectionTypeLoadException ex)
@@ -130,7 +227,7 @@ namespace StreamCore.Chat
             }
         }
 
-        protected static void SafeInvokeAction<M>(Action<M> action, M message) where M : GenericChatMessage
+        protected static void SafeInvokeAction<M>(Action<M> action, M message)
         {
             if (action == null)
                 return;
@@ -140,6 +237,24 @@ namespace StreamCore.Chat
                 try
                 {
                     a?.DynamicInvoke(message);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log(ex.ToString());
+                }
+            }
+        }
+
+        protected static void SafeInvokeAction<M,D>(Action<M,D> action, M message, D data)
+        {
+            if (action == null)
+                return;
+
+            foreach (var a in action.GetInvocationList())
+            {
+                try
+                {
+                    a?.DynamicInvoke(message, data);
                 }
                 catch (Exception ex)
                 {

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace StreamCore.YouTube
 {
-    public class YouTubeConnection
+    internal class YouTubeConnection
     {
         internal static bool initialized = false;
         internal static void Initialize_Internal()

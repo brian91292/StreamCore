@@ -1,4 +1,5 @@
 ﻿//using EnhancedTwitchChat.Bot;
+using StreamCore.Chat;
 using StreamCore.Config;
 using StreamCore.Utils;
 using System;
@@ -514,7 +515,22 @@ namespace StreamCore.Twitch
                                 }
                             }
                         }
+                        // Invoke twitch message callbacks
                         TwitchMessageHandler.InvokeRegisteredCallbacks(twitchMsg, assemblyHash);
+
+                        // Invoke global message callbacks
+                        switch(twitchMsg.messageType)
+                        {
+                            case "PRIVMSG":
+                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnMessageReceived, twitchMsg, assemblyHash);
+                                break;
+                            case "CLEARMSG":
+                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnSingleMessageDeleted, twitchMsg, assemblyHash);
+                                break;
+                            case "CLEARCHAT":
+                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnAllMessagesDeleted, twitchMsg, assemblyHash);
+                                break;
+                        }
                     }
                     catch(Exception ex)
                     {

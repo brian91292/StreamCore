@@ -26,7 +26,7 @@ namespace StreamCore.Chat
     }
 
 
-    internal class YouTubeMessageHandler : GenericMessageHandlerWrapper<IYouTubeMessageHandler>
+    internal class YouTubeMessageHandler : GlobalMessageHandlerWrapper<IYouTubeMessageHandler>
     {
         private static YouTubeMessageHandler _instance = null;
         internal static YouTubeMessageHandler Instance
@@ -69,6 +69,7 @@ namespace StreamCore.Chat
                     }
                 }
             }
+            
         }
 
         internal static void YouTube_OnMessageReceived(IYouTubeMessageHandler handler, YouTubeMessage youTubeMessage)
