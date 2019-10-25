@@ -38,7 +38,7 @@ namespace StreamCore
             if (Instance != null) return;
             Instance = this;
 
-            SharedMonoBehaviour.StartCoroutine(GenericMessageHandler.CreateGlobalMessageHandlers());
+            SharedMonoBehaviour.StartCoroutine(GlobalMessageHandler.CreateGlobalMessageHandlers());
 
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;

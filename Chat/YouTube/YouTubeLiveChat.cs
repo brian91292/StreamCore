@@ -152,7 +152,13 @@ namespace StreamCore.YouTube
                                     // Then create a new YouTubeMessage object from it and send it along to the other StreamCore clients, excluding the assembly that sent the message
                                     var newMessage = new YouTubeMessage();
                                     newMessage.Update(json);
-                                    YouTubeMessageHandler.InvokeRegisteredCallbacks(newMessage, Assembly.GetCallingAssembly().GetHashCode().ToString());
+                                    var assemblyHash = Assembly.GetCallingAssembly().GetHashCode().ToString();
+
+                                    // Invoke YouTube message received callbacks
+                                    YouTubeMessageHandler.InvokeRegisteredCallbacks(newMessage, assemblyHash);
+
+                                    // Invoke global message received callbacks
+                                    GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnMessageReceived, newMessage, assemblyHash);
                                     _sendQueue.TryDequeue(out var gone);
                                 }
                             }
@@ -215,8 +221,16 @@ namespace StreamCore.YouTube
                 YouTubeMessage newMessage = new YouTubeMessage();
                 newMessage.Update(item);
 
+                // Invoke YouTube message callbacks
                 YouTubeMessageHandler.InvokeRegisteredCallbacks(newMessage, String.Empty);
-                Thread.Sleep(0);
+
+                // Invoke global message callbacks
+                switch (newMessage.kind) {
+                    case "youtube#liveChatMessage":
+                        GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnMessageReceived, newMessage, String.Empty);
+                        break;
+                }
+                Thread.Sleep(100);
             }
         }
         

@@ -28,7 +28,7 @@ namespace StreamCore.Twitch
         /// Twitch ROOMSTATE event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
         /// <param name="twitchMsg">The Twitch message that was received.</param>
-        Action<TwitchMessage> Twitch_OnRoomstateReceived { get; set; }
+        Action<TwitchMessage, TwitchChannel> Twitch_OnRoomstateReceived { get; set; }
 
         /// <summary>
         /// Twitch USERNOTICE event handler. *Note* The callback is NOT on the Unity thread!
@@ -67,7 +67,7 @@ namespace StreamCore.Twitch
         Action<TwitchMessage> Twitch_OnJoinReceived { get; set; }
     }
 
-    internal class TwitchMessageHandler : GenericMessageHandlerWrapper<ITwitchMessageHandler>
+    internal class TwitchMessageHandler : GlobalMessageHandlerWrapper<ITwitchMessageHandler>
     {
         private static TwitchMessageHandler _instance = null;
         internal static TwitchMessageHandler Instance
@@ -81,6 +81,7 @@ namespace StreamCore.Twitch
                 return _instance;
             }
         }
+
 
         internal static void InvokeRegisteredCallbacks(TwitchMessage message, string assemblyHash)
         {
@@ -235,7 +236,7 @@ namespace StreamCore.Twitch
             var channel = TwitchWebSocketClient.ChannelInfo[twitchMsg.channelName];
             if (channel.rooms == null)
                 TwitchAPI.GetRoomsForChannelAsync(channel, null);
-            SafeInvokeAction(handler.Twitch_OnRoomstateReceived, twitchMsg);
+            SafeInvokeAction(handler.Twitch_OnRoomstateReceived, twitchMsg, channel);
         }
 
         internal static void Twitch_OnUsernoticeReceived(ITwitchMessageHandler handler, TwitchMessage twitchMsg) 
