@@ -70,7 +70,7 @@ After you have setup the chat message callbacks and your class is ready, set the
 **Note:** As long as `ChatCallbacksReady` is set to false, StreamCore will not try to establish a connection to any chat services. This means you can effectively block StreamCore from establishing any chat connections for as long as you need until your class is ready.
 
 ### Example
-```cs+
+```cs
 using StreamCore;
 using StreamCore.Chat;
 using StreamCore.YouTube;
@@ -82,7 +82,7 @@ namespace YourModsNamespace
     {
         public bool ChatCallbacksReady { get; set; } = false;
         public Action<TwitchMessage> Twitch_OnPrivmsgReceived { get; set; }
-        public Action<TwitchMessage> Twitch_OnRoomstateReceived { get; set;  }
+        public Action<TwitchMessage, TwitchChannel> Twitch_OnRoomstateReceived { get; set;  }
         public Action<TwitchMessage> Twitch_OnUsernoticeReceived { get; set;  }
         public Action<TwitchMessage> Twitch_OnUserstateReceived { get; set;  }
         public Action<TwitchMessage> Twitch_OnClearchatReceived { get; set;  }
