@@ -66,7 +66,7 @@ namespace StreamCore.YouTube
             var response = e.Response;
             byte[] data = null;
 
-            switch (request.Url.LocalPath)
+            switch(request.Url.LocalPath)
             {
                 case "/callback":
                     // If we successfully exchange our code for an auth token, request a listing of live broadcast info

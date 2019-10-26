@@ -16,15 +16,14 @@ namespace StreamCore
 {
     public class Plugin : IPlugin
     {
+        public static Plugin Instance { get; private set; }
+        private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
         public static readonly string ModuleName = "Stream Core";
-
         public string Name => ModuleName;
         public string Version => "2.1.2";
 
         public static Plugin Instance { get; private set; }
         
-        private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
-
         private static readonly object _loggerLock = new object();
         public static void Log(string text,
                 [CallerFilePath] string file = "",
@@ -34,7 +33,7 @@ namespace StreamCore
             lock(_loggerLock) 
                 Console.WriteLine($"{ModuleName}::{Path.GetFileName(file)}->{member}({line}): {text}");
         }
-
+        
         public void OnApplicationStart()
         {
             if (Instance != null) return;
@@ -74,6 +73,7 @@ namespace StreamCore
 
             // Shutdown our twitch client if it's initialized
             TwitchWebSocketClient.Shutdown();
+            YouTubeConnection.Stop();
         }
 
         public void OnLevelWasLoaded(int level)

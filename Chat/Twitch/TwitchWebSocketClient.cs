@@ -1,4 +1,5 @@
 ﻿//using EnhancedTwitchChat.Bot;
+using StreamCore.Chat;
 using StreamCore.Config;
 using StreamCore.Utils;
 using System;
@@ -19,8 +20,8 @@ namespace StreamCore.Twitch
     /// </summary>
     public class TwitchWebSocketClient
     {
-        private static readonly Regex _twitchMessageRegex = new Regex(@"(@(?<Tags>[\S@\/;\-=,#]+) )?(:(?<HostName>[a-z0-9\.!@_]+) )?(?<!#|\S)()(?<MessageType>[A-Z0-9]+(?!\S))( \*)?( (#)?(?<ChannelName>[a-z0-9_:-]+))?( :(?<Message>.*))?", RegexOptions.Compiled);
-        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[^@^;^=]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled);
+        private static readonly Regex _twitchMessageRegex = new Regex("^(?:@(?<Tags>[^\r\n ]*) +|())(?::(?<HostName>[^\r\n ]+) +|())(?<MessageType>[^\r\n ]+)(?: +(?<ChannelName>[^:\r\n ]+[^\r\n ]*(?: +[^:\r\n ]+[^\r\n ]*)*)|())?(?: +:(?<Message>[^\r\n]*)| +())?[\r\n]*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[^@^;^=]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled | RegexOptions.Multiline);
 
         private static Random _rand = new Random();
         private static WebSocket _ws;
@@ -90,26 +91,15 @@ namespace StreamCore.Twitch
         private static int _messageLimit { get => (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch 
         private static ConcurrentQueue<KeyValuePair<int, string>> _sendQueue = new ConcurrentQueue<KeyValuePair<int, string>>();
         
-        /// <summary>
-        /// Call this function once OnApplicationStart if you intend to use the Twitch chat API
-        /// </summary>
         internal static void Initialize_Internal()
         {
             if (Initialized)
                 return;
 
-            TwitchMessageHandlers.Initialize();
-
-            // Stop config updated callback when we haven't switched channels
             _lastChannel = TwitchLoginConfig.Instance.TwitchChannelName;
-
             TwitchLoginConfig.Instance.ConfigChangedEvent += Instance_ConfigChangedEvent;
-
             Initialized = true;
-
-            Task.Run(() =>
-            {
-                // Sleep for a second before connecting, to allow for other plugins to register their callbacks incase they depend on a connected callback or something
+            Task.Run(() => {
                 Thread.Sleep(1000);
                 Connect();
             });
@@ -127,7 +117,6 @@ namespace StreamCore.Twitch
                         PartChannel(_lastChannel);
                     if (TwitchLoginConfig.Instance.TwitchChannelName != String.Empty)
                         JoinChannel(TwitchLoginConfig.Instance.TwitchChannelName);
-                    ConnectionTime = DateTime.Now;
 
                     // Invoke OnTwitchChannelUpdated event
                     if(OnTwitchChannelUpdated != null)
@@ -456,35 +445,45 @@ namespace StreamCore.Twitch
         {
             try
             {
-                var messageType = _twitchMessageRegex.Matches(rawMessage);
-                if (messageType.Count == 0)
+                //Plugin.Log($"RawMsg: {rawMessage}");
+                var matches = _twitchMessageRegex.Matches(rawMessage);
+                if (matches.Count == 0)
                 {
                     Plugin.Log($"Unhandled message: {rawMessage}");
                     return;
                 }
 
-                for (int i = 0; i < messageType.Count; i++)
+                for (int i = 0; i < matches.Count; i++)
                 {
                     try
                     {
-                        if (!messageType[i].Groups["MessageType"].Success)
+                        if (!matches[i].Groups["MessageType"].Success)
                         {
                             Plugin.Log($"Failed to get messageType for message {rawMessage}");
                             return;
+                        }
+
+                        string type = matches[i].Groups["MessageType"].Value;
+                        //Plugin.Log($"MessageType: {type}, Message: {rawMessage}");
+                        if (type == "PING")
+                        {
+                            Plugin.Log("Ping... Pong.");
+                            _ws.Send("PONG :tmi.twitch.tv");
+                            continue;
                         }
 
                         // Instantiate our twitch message
                         TwitchMessage twitchMsg = new TwitchMessage();
                         twitchMsg.user = new TwitchUser();
                         twitchMsg.rawMessage = rawMessage;
-                        twitchMsg.messageType = messageType[i].Groups["MessageType"].Value;
+                        twitchMsg.messageType = type;
                         twitchMsg.tags = _tagRegex.Matches(rawMessage);
-                        if (messageType[i].Groups["Message"].Success)
-                            twitchMsg.message = messageType[i].Groups["Message"].Value;
-                        if (messageType[i].Groups["HostName"].Success)
-                            twitchMsg.hostString = messageType[i].Groups["HostName"].Value;
-                        if (messageType[i].Groups["ChannelName"].Success)
-                            twitchMsg.channelName = messageType[i].Groups["ChannelName"].Value;
+                        if (matches[i].Groups["Message"].Success)
+                            twitchMsg.message = matches[i].Groups["Message"].Value;
+                        if (matches[i].Groups["HostName"].Success)
+                            twitchMsg.hostString = matches[i].Groups["HostName"].Value;
+                        if (matches[i].Groups["ChannelName"].Success)
+                            twitchMsg.channelName = matches[i].Groups["ChannelName"].Value.Trim(new char[] { '#' });
 
                         // Skip any command messages, as if we're encountering one it came from the StreamCore client and would never be received by other clients (since it's a command)
                         if (twitchMsg.message.StartsWith("/"))
@@ -515,7 +514,22 @@ namespace StreamCore.Twitch
                                 }
                             }
                         }
-                        TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
+                        // Invoke twitch message callbacks
+                        TwitchMessageHandler.InvokeRegisteredCallbacks(twitchMsg, assemblyHash);
+
+                        // Invoke global message callbacks
+                        switch(twitchMsg.messageType)
+                        {
+                            case "PRIVMSG":
+                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnMessageReceived, twitchMsg, assemblyHash);
+                                break;
+                            case "CLEARMSG":
+                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnSingleMessageDeleted, twitchMsg, assemblyHash);
+                                break;
+                            case "CLEARCHAT":
+                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnAllMessagesDeleted, twitchMsg, assemblyHash);
+                                break;
+                        }
                     }
                     catch(Exception ex)
                     {
@@ -534,17 +548,7 @@ namespace StreamCore.Twitch
             try
             {
                 if (!ev.IsText) return;
-                
-                Plugin.Log($"RawMsg: {ev.Data}");
-                string rawMessage = ev.Data.TrimEnd();
-                if (rawMessage.StartsWith("PING"))
-                {
-                    Plugin.Log("Ping... Pong.");
-                    _ws.Send("PONG :tmi.twitch.tv");
-                    return;
-                }
-                
-                OnMessageReceived(rawMessage);
+                OnMessageReceived(ev.Data.TrimEnd());
             }
             catch (Exception ex)
             {

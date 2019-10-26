@@ -10,7 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StreamCore
+namespace StreamCore.Twitch
 {
     public class TwitchAPI
     {

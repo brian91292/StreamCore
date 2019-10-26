@@ -98,9 +98,7 @@
     <Compile Include="Chat\GenericChatMessage.cs" />
     <Compile Include="Chat\GenericMessageHandler.cs" />
     <Compile Include="Chat\Twitch\TwitchRoom.cs" />
-    <Compile Include="Chat\Twitch\TwitchMessageHandlers.cs" />
     <Compile Include="Chat\Twitch\TwitchChannel.cs" />
-    <Compile Include="Chat\Twitch\TwitchMessage.cs" />
     <Compile Include="Chat\Twitch\TwitchUser.cs" />
     <Compile Include="Chat\Twitch\TwitchWebSocketClient.cs" />
     <Compile Include="Chat\websocket-sharp\ByteOrder.cs" />
@@ -191,7 +189,7 @@
     <Compile Include="Globals.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TwitchAPI.cs" />
+    <Compile Include="Chat\Twitch\TwitchAPI.cs" />
     <Compile Include="Chat\YouTube\YouTubeCallbackListener.cs" />
     <Compile Include="Utilities\ObjectPool.cs" />
     <Compile Include="Utilities\ReflectionUtil.cs" />

@@ -25,6 +25,6 @@ namespace StreamCore
         /// <summary>
         /// This value will be true when we're at the main menu.
         /// </summary>
-        public static bool IsAtMainMenu = true;
+        public static bool IsAtMainMenu = false;
     }
 }

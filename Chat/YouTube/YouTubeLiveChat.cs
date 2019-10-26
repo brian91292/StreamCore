@@ -102,6 +102,8 @@ namespace StreamCore.YouTube
         public static string etag { get; internal set; } = "";
         private static string _nextPageToken { get; set; } = "";
         private static int _pollingIntervalMillis { get; set; } = 0;
+        private static Task _sendMessageThread = null;
+        private static ConcurrentQueue<string> _sendQueue = new ConcurrentQueue<string>();
 
         private static Task _sendMessageThread = null;
         private static ConcurrentQueue<KeyValuePair<int, string>> _sendQueue = new ConcurrentQueue<KeyValuePair<int, string>>();
