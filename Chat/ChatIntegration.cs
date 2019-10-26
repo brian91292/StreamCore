@@ -39,11 +39,13 @@ namespace StreamCore.Chat
 
         internal static ChatIntegration<ITwitchIntegration> Twitch = null;
         internal static ChatIntegration<IYouTubeIntegration> YouTube = null;
+        internal static ChatIntegration<IGlobalChatIntegration> Global = null;
 
         internal static IEnumerator InitGlobalChatHandlers()
         {
             Twitch = new ChatIntegration<ITwitchIntegration>();
             YouTube = new ChatIntegration<IYouTubeIntegration>();
+            Global = new ChatIntegration<IGlobalChatIntegration>();
 
             bool initTwitch = false, initYouTube = false;
             // Iterate through all the message handlers that were registered
