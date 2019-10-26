@@ -60,18 +60,14 @@ namespace StreamCore.Chat
                     Plugin.Log($"Instance of type {typeName} is ready!");
                 }
 
+                bool isGlobalIntegration = typeof(IGlobalChatIntegration).IsAssignableFrom(instanceType);
                 // Mark the correct services for initialization based on type
-                if (typeof(ITwitchIntegration).IsAssignableFrom(instanceType))
+                if (typeof(ITwitchIntegration).IsAssignableFrom(instanceType) || isGlobalIntegration)
                 {
                     initTwitch = true;
                 }
-                if (typeof(IYouTubeIntegration).IsAssignableFrom(instanceType))
+                if (typeof(IYouTubeIntegration).IsAssignableFrom(instanceType) || isGlobalIntegration)
                 {
-                    initYouTube = true;
-                }
-                if (typeof(IGlobalChatIntegration).IsAssignableFrom(instanceType))
-                {
-                    initTwitch = true;
                     initYouTube = true;
                 }
             }
