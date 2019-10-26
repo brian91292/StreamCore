@@ -515,21 +515,7 @@ namespace StreamCore.Twitch
                             }
                         }
                         // Invoke twitch message callbacks
-                        TwitchMessageHandler.InvokeRegisteredCallbacks(twitchMsg, assemblyHash);
-
-                        // Invoke global message callbacks
-                        switch(twitchMsg.messageType)
-                        {
-                            case "PRIVMSG":
-                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnMessageReceived, twitchMsg, assemblyHash);
-                                break;
-                            case "CLEARMSG":
-                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnSingleMessageDeleted, twitchMsg, assemblyHash);
-                                break;
-                            case "CLEARCHAT":
-                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnAllMessagesDeleted, twitchMsg, assemblyHash);
-                                break;
-                        }
+                        TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
                     }
                     catch(Exception ex)
                     {

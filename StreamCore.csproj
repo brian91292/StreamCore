@@ -97,6 +97,8 @@
     <Compile Include="Chat\ChatIntegration.cs" />
     <Compile Include="Chat\GenericChatMessage.cs" />
     <Compile Include="Chat\GenericMessageHandler.cs" />
+    <Compile Include="Chat\Twitch\TwitchMessage.cs" />
+    <Compile Include="Chat\Twitch\TwitchMessageHandlers.cs" />
     <Compile Include="Chat\Twitch\TwitchRoom.cs" />
     <Compile Include="Chat\Twitch\TwitchChannel.cs" />
     <Compile Include="Chat\Twitch\TwitchUser.cs" />
