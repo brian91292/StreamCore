@@ -23,7 +23,7 @@ namespace StreamCore.YouTube
                 StopServer();
 
             Random rand = new Random();
-            while(true)
+            while (true)
             {
                 try
                 {
@@ -38,7 +38,7 @@ namespace StreamCore.YouTube
                     break;
 
                 }
-                catch {}
+                catch { }
                 Thread.Sleep(0);
             }
 

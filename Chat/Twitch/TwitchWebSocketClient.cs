@@ -20,7 +20,7 @@ namespace StreamCore.Twitch
     /// </summary>
     public class TwitchWebSocketClient
     {
-        private static readonly Regex _twitchMessageRegex = new Regex("^(?:@(?<Tags>[^\r\n ]*) +|())(?::(?<HostName>[^\r\n ]+) +|())(?<MessageType>[^\r\n ]+)(?: +(?<ChannelName>[^:\r\n ]+[^\r\n ]*(?: +[^:\r\n ]+[^\r\n ]*)*)|())?(?: +:(?<Message>[^\r\n]*)| +())?[\r\n]*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex _twitchMessageRegex = new Regex(@"^(?:@(?<Tags>[^\r\n ]*) +|())(?::(?<HostName>[^\r\n ]+) +|())(?<MessageType>[^\r\n ]+)(?: +(?<ChannelName>[^:\r\n ]+[^\r\n ]*(?: +[^:\r\n ]+[^\r\n ]*)*)|())?(?: +:(?<Message>[^\r\n]*)| +())?[\r\n]*$", RegexOptions.Compiled | RegexOptions.Multiline);
         private static readonly Regex _tagRegex = new Regex(@"(?<Tag>[^@^;^=]+)=(?<Value>[^;\s]+)", RegexOptions.Compiled | RegexOptions.Multiline);
 
         private static Random _rand = new Random();
@@ -44,7 +44,7 @@ namespace StreamCore.Twitch
         /// <summary>
         /// The last time the client established a connection to the Twitch servers.
         /// </summary>
-        public static DateTime ConnectionTime { get; private set; }
+        public static DateTime ConnectionTime { get; private set; } = DateTime.Now;
 
         /// <summary>
         /// A dictionary of channel information for every channel we've joined during this session, the key is the channel name.
@@ -89,12 +89,14 @@ namespace StreamCore.Twitch
         private static int _messagesSent = 0;
         private static int _sendResetInterval = 30;
         private static int _messageLimit { get => (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch 
-        private static ConcurrentQueue<string> _sendQueue = new ConcurrentQueue<string>();
+        private static ConcurrentQueue<KeyValuePair<int, string>> _sendQueue = new ConcurrentQueue<KeyValuePair<int, string>>();
         
         internal static void Initialize_Internal()
         {
             if (Initialized)
                 return;
+
+            TwitchMessageHandlers.Initialize();
 
             _lastChannel = TwitchLoginConfig.Instance.TwitchChannelName;
             TwitchLoginConfig.Instance.ConfigChangedEvent += Instance_ConfigChangedEvent;
@@ -340,9 +342,8 @@ namespace StreamCore.Twitch
                         if (_messagesSent < _messageLimit && _sendQueue.TryDequeue(out var fullMsg))
                         {
                             // Split off the assembly hash, we'll use this in the callback we invoke to filter out calls to the assembly that created the callback.
-                            string[] parts= fullMsg.Split(new[] { '/' }, 2);
-                            string assembly = parts[0];
-                            string msg = parts[1];
+                            string assembly = fullMsg.Key.ToString();
+                            string msg = fullMsg.Value;
 
                             // Send the message, then invoke the received callback for all the other assemblies
                             _ws.Send(msg);
@@ -360,7 +361,7 @@ namespace StreamCore.Twitch
         private static void SendRawInternal(Assembly assembly, string msg)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open && msg.Length > 0)
-                _sendQueue.Enqueue($"{assembly.GetHashCode()}/{msg}");
+                _sendQueue.Enqueue(new KeyValuePair<int, string>(assembly.GetHashCode(), msg));
         }
 
         /// <summary>
@@ -516,21 +517,7 @@ namespace StreamCore.Twitch
                             }
                         }
                         // Invoke twitch message callbacks
-                        TwitchMessageHandler.InvokeRegisteredCallbacks(twitchMsg, assemblyHash);
-
-                        // Invoke global message callbacks
-                        switch(twitchMsg.messageType)
-                        {
-                            case "PRIVMSG":
-                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnMessageReceived, twitchMsg, assemblyHash);
-                                break;
-                            case "CLEARMSG":
-                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnSingleMessageDeleted, twitchMsg, assemblyHash);
-                                break;
-                            case "CLEARCHAT":
-                                GlobalMessageHandler.InvokeRegisteredCallbacks(GlobalMessageTypes.OnAllMessagesDeleted, twitchMsg, assemblyHash);
-                                break;
-                        }
+                        TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
                     }
                     catch(Exception ex)
                     {

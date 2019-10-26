@@ -71,6 +71,7 @@ namespace StreamCore.YouTube
     {
         public static string kind { get; internal set; } = "";
         public static string etag { get; internal set; } = "";
+        public static string channelName { get; internal set; } = "";
         public static YouTubeLiveBroadcastInfo currentBroadcast { get; internal set; }
         public static Dictionary<string, YouTubeLiveBroadcastInfo> broadcasts { get; internal set; } = new Dictionary<string, YouTubeLiveBroadcastInfo>();
         
@@ -128,6 +129,36 @@ namespace StreamCore.YouTube
             return true;
         }
 
+        internal static string GetChannelName(string channelID)
+        {
+            HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/channels?part=snippet&id={channelID}");
+            web.Method = "GET";
+            web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
+            web.Accept = "application/json";
+            web.UserAgent = "StreamCoreClient";
+
+            using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
+            {
+                if (resp.StatusCode == HttpStatusCode.OK)
+                {
+                    using (Stream dataStream = resp.GetResponseStream())
+                    {
+                        using (StreamReader reader = new StreamReader(dataStream))
+                        {
+
+                            var json = JSON.Parse(reader.ReadToEnd());
+
+                            foreach(var item in json["items"].AsArray)
+                            {
+                                return item.Value["snippet"]["title"].Value;
+                            }
+                        }
+                    }
+                }
+            }
+            return "";
+        }
+
         internal static void Refresh()
         {
             try
@@ -150,6 +181,10 @@ namespace StreamCore.YouTube
                                 string ret = reader.ReadToEnd();
                                 if (Update(ret))
                                 {
+                                    channelName = GetChannelName(currentBroadcast.snippet.channelId);
+                                    Plugin.Log("YouTube channel name: " + channelName);
+                                    YouTubeMessageHandlers.InvokeHandler(new YouTubeMessage("youtube#onConnectedToLiveChat"), "");
+
                                     TaskHelper.CancelTask("YouTubeChannelRefresh");
                                     Plugin.Log($"There are currently {broadcasts.Count} broadcasts being tracked.");// Ret: {ret}");
                                 }
@@ -172,24 +207,32 @@ namespace StreamCore.YouTube
                     {
                         var response = reader.ReadToEnd();
                         Plugin.Log($"Status: {ex.Status}, Response: {response}");
-                    }
-                }
 
-                switch (((HttpWebResponse)ex.Response).StatusCode)
-                {
-                    // If we hit an unauthorized exception, the users auth token has expired
-                    case HttpStatusCode.Unauthorized:
-                        // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
-                        if (!YouTubeOAuthToken.Refresh(true))
+                        switch (((HttpWebResponse)ex.Response).StatusCode)
                         {
-                            YouTubeOAuthToken.Invalidate();
-                            YouTubeOAuthToken.Generate();
+                            // If we hit an unauthorized exception, the users auth token has expired
+                            case HttpStatusCode.Unauthorized:
+                                // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
+                                if (!YouTubeOAuthToken.Refresh(true))
+                                {
+                                    YouTubeOAuthToken.Invalidate();
+                                    YouTubeOAuthToken.Generate();
+                                }
+                                break;
+                            case HttpStatusCode.Forbidden:
+                                var json = JSON.Parse(response);
+                                List<string> errorList = new List<string>();
+                                foreach(var error in json["error"]["errors"].AsArray)
+                                {
+                                    errorList.Add(error.Value["reason"].Value);
+                                }
+                                YouTubeConnection.lastError = "Unable to retrieve live broadcast data! Ensure you have configured the YouTube data API correctly, then try again. Error(s): " + string.Join(", ", errorList);
+                                YouTubeMessageHandlers.InvokeHandler(new YouTubeMessage("youtube#onError"), "");
+                                currentBroadcast = null;
+                                YouTubeConnection.Stop();
+                                break;
                         }
-                        break;
-                    case HttpStatusCode.Forbidden:
-                        currentBroadcast = null;
-                        YouTubeConnection.Stop();
-                        break;
+                    }
                 }
             }
             catch (Exception ex)

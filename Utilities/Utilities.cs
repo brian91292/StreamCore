@@ -41,9 +41,9 @@ namespace StreamCore.Utils
 
         public static bool IsAllWhitespace(this string str)
         {
-            foreach(char c in str)
+            foreach (char c in str)
             {
-                if(!Char.IsWhiteSpace(c) && !IsUnicodeWhitespace(c))
+                if (!Char.IsWhiteSpace(c) && !IsUnicodeWhitespace(c))
                 {
                     return false;
                 }
