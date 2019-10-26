@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StreamCore.Chat
+namespace StreamCore.Twitch
 {
     public class TwitchChannel
     {

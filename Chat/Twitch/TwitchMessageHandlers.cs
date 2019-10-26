@@ -1,4 +1,5 @@
-﻿using StreamCore.Utils;
+﻿using StreamCore.Chat;
+using StreamCore.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,16 +8,16 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace StreamCore.Chat
+namespace StreamCore.Twitch
 {
     /// <summary>
     /// All the message handlers associated with a Twitch stream (PRIVMSG, ROOMSTATE, USERNOTICE, etc).
     /// </summary>
-    public class TwitchMessageHandlers
+    public class TwitchMessageHandlers : GenericMessageHandler<TwitchMessage>
     {
         #region Message Handler Dictionaries
         private static Dictionary<string, Action<TwitchMessage>> _PRIVMSG_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
-        private static Dictionary<string, Action<TwitchMessage>> _ROOMSTATE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
+        private static Dictionary<string, Action<TwitchMessage, TwitchChannel>> _ROOMSTATE_CALLBACKS = new Dictionary<string, Action<TwitchMessage, TwitchChannel>>();
         private static Dictionary<string, Action<TwitchMessage>> _USERNOTICE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
         private static Dictionary<string, Action<TwitchMessage>> _USERSTATE_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
         private static Dictionary<string, Action<TwitchMessage>> _CLEARCHAT_CALLBACKS = new Dictionary<string, Action<TwitchMessage>>();
@@ -37,7 +38,7 @@ namespace StreamCore.Chat
         /// <summary>
         /// Twitch ROOMSTATE event handler. *Note* The callback is NOT on the Unity thread!
         /// </summary>
-        public static Action<TwitchMessage> ROOMSTATE
+        public static Action<TwitchMessage, TwitchChannel> ROOMSTATE
         {
             set { lock (_ROOMSTATE_CALLBACKS) { _ROOMSTATE_CALLBACKS[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
             get { return _ROOMSTATE_CALLBACKS.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
@@ -98,9 +99,6 @@ namespace StreamCore.Chat
         }
 
 
-        private static bool Initialized = false;
-        private static Dictionary<string, Action<TwitchMessage, string>> _messageHandlers = new Dictionary<string, Action<TwitchMessage, string>>();
-
         internal static void Initialize()
         {
             if (Initialized)
@@ -120,42 +118,6 @@ namespace StreamCore.Chat
             Initialized = true;
         }
 
-        internal static bool InvokeHandler(TwitchMessage twitchMsg, string assemblyHash)
-        {
-            // Call the appropriate handler for this messageType
-            if (_messageHandlers.TryGetValue(twitchMsg.messageType, out var handler))
-            {
-                handler?.Invoke(twitchMsg, assemblyHash);
-                return true;
-            }
-            return false;
-        }
-
-        private static void SafeInvoke(Dictionary<string, Action<TwitchMessage>> dict, TwitchMessage message, string invokerHash)
-        {
-            foreach (var instance in dict)
-            {
-                string assemblyHash = instance.Key;
-                // Don't invoke the callback if it was registered by the assembly that sent the message which invoked this callback (no more vindaloop :D)
-                if (assemblyHash == invokerHash)
-                    continue;
-
-                var action = instance.Value;
-                if (action == null) return;
-
-                foreach (var a in action.GetInvocationList())
-                {
-                    try
-                    {
-                        a?.DynamicInvoke(message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Plugin.Log(ex.ToString());
-                    }
-                }
-            }
-        }
 
         private static void ParseRoomstateTag(Match t, string channel)
         {
@@ -258,7 +220,7 @@ namespace StreamCore.Chat
             if (channel.rooms == null)
                 TwitchAPI.GetRoomsForChannelAsync(channel, null);
 
-            SafeInvoke(_ROOMSTATE_CALLBACKS, twitchMsg, invokerHash);
+            SafeInvoke(_ROOMSTATE_CALLBACKS, twitchMsg, channel, invokerHash);
         }
 
         private static void USERNOTICE_Handler(TwitchMessage twitchMsg, string invokerHash)

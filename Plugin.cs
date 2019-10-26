@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using StreamCore.YouTube;
 using StreamCore.Utils;
+using StreamCore.Twitch;
 
 namespace StreamCore
 {
@@ -18,7 +19,7 @@ namespace StreamCore
         public static readonly string ModuleName = "Stream Core";
 
         public string Name => ModuleName;
-        public string Version => "2.0.0";
+        public string Version => "2.1.2";
 
         public static Plugin Instance { get; private set; }
         
@@ -38,6 +39,8 @@ namespace StreamCore
         {
             if (Instance != null) return;
             Instance = this;
+
+            SharedMonoBehaviour.StartCoroutine(GlobalChatHandler.InitGlobalChatHandlers());
 
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;

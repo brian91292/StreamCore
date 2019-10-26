@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
-namespace StreamCore.Chat
+namespace StreamCore.Twitch
 {
     /// <summary>
     /// The main Twitch websocket client.
@@ -43,7 +43,7 @@ namespace StreamCore.Chat
         /// <summary>
         /// The last time the client established a connection to the Twitch servers.
         /// </summary>
-        public static DateTime ConnectionTime { get; private set; }
+        public static DateTime ConnectionTime { get; private set; } = DateTime.Now;
 
         /// <summary>
         /// A dictionary of channel information for every channel we've joined during this session, the key is the channel name.
@@ -88,12 +88,12 @@ namespace StreamCore.Chat
         private static int _messagesSent = 0;
         private static int _sendResetInterval = 30;
         private static int _messageLimit { get => (OurTwitchUser.isBroadcaster || OurTwitchUser.isMod) ? 100 : 20; } // Defines how many messages can be sent within _sendResetInterval without causing a global ban on twitch 
-        private static ConcurrentQueue<string> _sendQueue = new ConcurrentQueue<string>();
+        private static ConcurrentQueue<KeyValuePair<int, string>> _sendQueue = new ConcurrentQueue<KeyValuePair<int, string>>();
         
         /// <summary>
         /// Call this function once OnApplicationStart if you intend to use the Twitch chat API
         /// </summary>
-        public static void Initialize()
+        internal static void Initialize_Internal()
         {
             if (Initialized)
                 return;
@@ -351,9 +351,8 @@ namespace StreamCore.Chat
                         if (_messagesSent < _messageLimit && _sendQueue.TryDequeue(out var fullMsg))
                         {
                             // Split off the assembly hash, we'll use this in the callback we invoke to filter out calls to the assembly that created the callback.
-                            string[] parts= fullMsg.Split(new[] { '/' }, 2);
-                            string assembly = parts[0];
-                            string msg = parts[1];
+                            string assembly = fullMsg.Key.ToString();
+                            string msg = fullMsg.Value;
 
                             // Send the message, then invoke the received callback for all the other assemblies
                             _ws.Send(msg);
@@ -371,7 +370,7 @@ namespace StreamCore.Chat
         private static void SendRawInternal(Assembly assembly, string msg)
         {
             if (LoggedIn && _ws.ReadyState == WebSocketState.Open && msg.Length > 0)
-                _sendQueue.Enqueue($"{assembly.GetHashCode()}/{msg}");
+                _sendQueue.Enqueue(new KeyValuePair<int, string>(assembly.GetHashCode(), msg));
         }
 
         /// <summary>

@@ -94,7 +94,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CHANGELOG.md" />
+    <Compile Include="Chat\ChatIntegration.cs" />
     <Compile Include="Chat\GenericChatMessage.cs" />
+    <Compile Include="Chat\GenericMessageHandler.cs" />
     <Compile Include="Chat\Twitch\TwitchRoom.cs" />
     <Compile Include="Chat\Twitch\TwitchMessageHandlers.cs" />
     <Compile Include="Chat\Twitch\TwitchChannel.cs" />
@@ -181,6 +183,7 @@
     <Compile Include="Chat\YouTube\YouTubeLiveBroadcast.cs" />
     <Compile Include="Chat\YouTube\YouTubeLiveChat.cs" />
     <Compile Include="Chat\YouTube\YouTubeConnection.cs" />
+    <Compile Include="Chat\YouTube\YouTubeMessageHandlers.cs" />
     <Compile Include="Chat\YouTube\YouTubeOAuthToken.cs" />
     <Compile Include="Chat\YouTube\YouTubeData.cs" />
     <Compile Include="Config\ObjectSerializer.cs" />
@@ -192,6 +195,7 @@
     <Compile Include="Chat\YouTube\YouTubeCallbackListener.cs" />
     <Compile Include="Utilities\ObjectPool.cs" />
     <Compile Include="Utilities\ReflectionUtil.cs" />
+    <Compile Include="Utilities\SharedMonoBehaviour.cs" />
     <Compile Include="Utilities\SimpleJSON.cs" />
     <Compile Include="Utilities\TaskHelper.cs" />
     <Compile Include="Utilities\Utilities.cs" />

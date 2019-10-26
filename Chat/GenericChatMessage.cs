@@ -1,4 +1,5 @@
-﻿using StreamCore.YouTube;
+﻿using StreamCore.Twitch;
+using StreamCore.YouTube;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +22,7 @@ namespace StreamCore.Chat
     {
         public string id { get; set; } = "";
         public string message { get; set; } = "";
+        public string messageType { get; set; } = "";
         public GenericChatUser user { get; set; } 
 
         public TwitchMessage Twitch { get => (this is TwitchMessage) ? this as TwitchMessage : new TwitchMessage(); }

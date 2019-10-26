@@ -2,6 +2,7 @@
 using StreamCore.SimpleJSON;
 using StreamCore.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -80,84 +81,119 @@ namespace StreamCore.YouTube
             newUser.Update(chatMsg["authorDetails"].AsObject);
             user = newUser;
             kind = chatMsg["kind"].Value;
+            messageType = kind;
             etag = chatMsg["etag"].Value;
             id = chatMsg["etag"].Value;
             message = snippet.displayMessage;
         }
+
+        public YouTubeMessage() { }
+
+        public YouTubeMessage(string messageType)
+        {
+            kind = messageType;
+            base.messageType = messageType;
+        }
     }
     
-    public class YouTubeLiveChat
+    internal class YouTubeLiveChat
     {
         public static string kind { get; internal set; } = "";
         public static string etag { get; internal set; } = "";
         private static string _nextPageToken { get; set; } = "";
         private static int _pollingIntervalMillis { get; set; } = 0;
 
-        #region Message Handler Dictionaries
-        private static Dictionary<string, Action<YouTubeMessage>> _onMessageReceived_Callbacks = new Dictionary<string, Action<YouTubeMessage>>();
-        #endregion
+        private static Task _sendMessageThread = null;
+        private static ConcurrentQueue<KeyValuePair<int, string>> _sendQueue = new ConcurrentQueue<KeyValuePair<int, string>>();
 
-        /// <summary>
-        /// YouTube OnMessageReceived event handler. *Note* The callback is NOT on the Unity thread!
-        /// </summary>
-        public static Action<YouTubeMessage> OnMessageReceived
+        private static void SendMessageLoop()
         {
-            set { lock (_onMessageReceived_Callbacks) { _onMessageReceived_Callbacks[Assembly.GetCallingAssembly().GetHashCode().ToString()] = value; } }
-            get { return _onMessageReceived_Callbacks.TryGetValue(Assembly.GetCallingAssembly().GetHashCode().ToString(), out var callback) ? callback : null; }
-        }
-
-        public static bool SendMessage(string message)
-        {
-            if (YouTubeLiveBroadcast.currentBroadcast == null)
+            while (!Globals.IsApplicationExiting)
             {
-                return false;
-            }
-
-            HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet");
-            web.Method = "POST";
-            web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
-            web.ContentType = "application/json";
-
-            JSONObject container = new JSONObject();
-            container["snippet"] = new JSONObject();
-            container["snippet"]["liveChatId"] = new JSONString(YouTubeLiveBroadcast.currentBroadcast.snippet.liveChatId);
-            container["snippet"]["type"] = new JSONString("textMessageEvent");
-            container["snippet"]["textMessageDetails"] = new JSONObject();
-            container["snippet"]["textMessageDetails"]["messageText"] = new JSONString(message);
-            string snippetString = container.ToString();
-            Plugin.Log($"Sending {snippetString}");
-            var postData = Encoding.ASCII.GetBytes(snippetString);
-            web.ContentLength = postData.Length;
-
-            using (var stream = web.GetRequestStream())
-                stream.Write(postData, 0, postData.Length);
-
-            using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
-            {
-                if (resp.StatusCode != HttpStatusCode.OK)
+                Thread.Sleep(500);
+                if (_sendQueue.Count > 0 && _sendQueue.TryPeek(out var messageToSend))
                 {
-                    using (Stream dataStream = resp.GetResponseStream())
+                    try
                     {
-                        using (StreamReader reader = new StreamReader(dataStream))
+                        HttpWebRequest web = (HttpWebRequest)WebRequest.Create($"https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet");
+                        web.Method = "POST";
+                        web.Headers.Add("Authorization", $"{YouTubeOAuthToken.tokenType} {YouTubeOAuthToken.accessToken}");
+                        web.ContentType = "application/json";
+
+                        JSONObject container = new JSONObject();
+                        container["snippet"] = new JSONObject();
+                        container["snippet"]["liveChatId"] = new JSONString(YouTubeLiveBroadcast.currentBroadcast.snippet.liveChatId);
+                        container["snippet"]["type"] = new JSONString("textMessageEvent");
+                        container["snippet"]["textMessageDetails"] = new JSONObject();
+                        container["snippet"]["textMessageDetails"]["messageText"] = new JSONString(messageToSend.Value);
+                        string snippetString = container.ToString();
+                        Plugin.Log($"Sending {snippetString}");
+                        var postData = Encoding.ASCII.GetBytes(snippetString);
+                        web.ContentLength = postData.Length;
+
+                        using (var stream = web.GetRequestStream())
+                            stream.Write(postData, 0, postData.Length);
+
+                        using (HttpWebResponse resp = (HttpWebResponse)web.GetResponse())
                         {
-                            var response = reader.ReadToEnd();
-                            Plugin.Log($"Status: {resp.StatusCode} ({resp.StatusDescription}), Response: {response}");
-                            return false;
+                            if (resp.StatusCode != HttpStatusCode.OK)
+                            {
+                                using (Stream dataStream = resp.GetResponseStream())
+                                {
+                                    using (StreamReader reader = new StreamReader(dataStream))
+                                    {
+                                        var response = reader.ReadToEnd();
+                                        Plugin.Log($"Status: {resp.StatusCode} ({resp.StatusDescription}), Response: {response}");
+                                        continue;
+                                    }
+                                }
+
+                            }
+
+                            using (Stream dataStream = resp.GetResponseStream())
+                            {
+                                using (StreamReader reader = new StreamReader(dataStream))
+                                {
+                                    // Read the response into a JSON objecet
+                                    var json = JSON.Parse(reader.ReadToEnd()).AsObject;
+
+                                    // Then create a new YouTubeMessage object from it and send it along to the other StreamCore clients, excluding the assembly that sent the message
+                                    var newMessage = new YouTubeMessage();
+                                    newMessage.Update(json);
+
+                                    var assemblyHash = messageToSend.Key.ToString();
+                                    // Invoke YouTube message received callbacks
+                                    YouTubeMessageHandlers.InvokeHandler(newMessage, assemblyHash);
+
+                                    _sendQueue.TryDequeue(out var gone);
+                                }
+                            }
                         }
                     }
-                    
-                }
-
-                // Read our token into a string
-                using (Stream dataStream = resp.GetResponseStream())
-                {
-                    using (StreamReader reader = new StreamReader(dataStream))
+                    catch (ThreadAbortException ex)
                     {
-                        var response = reader.ReadToEnd();
-                        Plugin.Log($"Response: {response}");
-                        return true;
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Failed the send the message for some other reason, it will be retried next iteration
+                        Plugin.Log($"Failed to send YouTube message, trying again in a few seconds! {ex.ToString()}");
+                        Thread.Sleep(2500);
                     }
                 }
+            }
+        }
+
+        public static void SendMessage(string message)
+        {
+            if (_sendMessageThread == null)
+            {
+                _sendMessageThread = Task.Run(() => SendMessageLoop());
+            }
+
+            if (YouTubeLiveBroadcast.currentBroadcast == null)
+            {
+                _sendQueue.Enqueue(new KeyValuePair<int, string>(Assembly.GetCallingAssembly().GetHashCode(), message));
             }
         }
 
@@ -190,30 +226,9 @@ namespace StreamCore.YouTube
             {
                 YouTubeMessage newMessage = new YouTubeMessage();
                 newMessage.Update(item);
-                
-                foreach (var instance in _onMessageReceived_Callbacks)
-                {
-                    //string assemblyHash = instance.Key;
-                    //// Don't invoke the callback if it was registered by the assembly that sent the message which invoked this callback (no more vindaloop :D)
-                    //if (assemblyHash == invokerHash)
-                    //    continue;
 
-                    var action = instance.Value;
-                    if (action == null) return;
-
-                    foreach (var a in action.GetInvocationList())
-                    {
-                        try
-                        {
-                            a?.DynamicInvoke(newMessage);
-                        }
-                        catch (Exception ex)
-                        {
-                            Plugin.Log(ex.ToString());
-                        }
-                    }
-                }
-                Thread.Sleep(0);
+                YouTubeMessageHandlers.InvokeHandler(newMessage, "");
+                Thread.Sleep(100);
             }
         }
         
@@ -256,31 +271,39 @@ namespace StreamCore.YouTube
             }
             catch (WebException ex)
             {
-                // Read the response and log it
+                 // Read the response and log it
                 using (Stream dataStream = ex.Response.GetResponseStream())
                 {
                     using (StreamReader reader = new StreamReader(dataStream))
                     {
                         var response = reader.ReadToEnd();
                         Plugin.Log($"Status: {ex.Status}, Response: {response}");
-                    }
-                }
 
-                switch (((HttpWebResponse)ex.Response).StatusCode)
-                {
-                    // If we hit an unauthorized exception, the users auth token has expired
-                    case HttpStatusCode.Unauthorized:
-                        // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
-                        if (!YouTubeOAuthToken.Refresh(true))
+                        switch (((HttpWebResponse)ex.Response).StatusCode)
                         {
-                            // If the refresh fails, we need to request permission from the user again as they probably unapproved our app
-                            YouTubeOAuthToken.Invalidate();
-                            YouTubeOAuthToken.Generate();
+                            // If we hit an unauthorized exception, the users auth token has expired
+                            case HttpStatusCode.Unauthorized:
+                                // Try to refresh the users auth token, forcing it through even if our local timestamp says it's not expired
+                                if (!YouTubeOAuthToken.Refresh(true))
+                                {
+                                    YouTubeOAuthToken.Invalidate();
+                                    YouTubeOAuthToken.Generate();
+                                }
+                                break;
+                            case HttpStatusCode.Forbidden:
+                                var json = JSON.Parse(response);
+                                List<string> errorList = new List<string>();
+                                foreach (var error in json["error"]["errors"].AsArray)
+                                {
+                                    errorList.Add(error.Value["reason"].Value);
+                                }
+                                YouTubeConnection.lastError = "Unable to retrieve YouTube live chat messages. Have you reached your quota? Error(s): " + string.Join(", ", errorList);
+                                YouTubeMessageHandlers.InvokeHandler(new YouTubeMessage("youtube#onError"), "");
+                                YouTubeLiveBroadcast.currentBroadcast = null;
+                                YouTubeConnection.Stop();
+                                break;
                         }
-                        break;
-                    case HttpStatusCode.Forbidden:
-                        YouTubeConnection.Stop();
-                        break;
+                    }
                 }
                 _pollingIntervalMillis = 3000;
             }
