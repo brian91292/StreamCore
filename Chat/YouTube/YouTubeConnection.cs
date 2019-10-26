@@ -13,11 +13,14 @@ namespace StreamCore.YouTube
 {
     internal class YouTubeConnection
     {
+        internal static string lastError = "";
         internal static bool initialized = false;
         internal static void Initialize_Internal()
         {
             if (!initialized)
             {
+                YouTubeMessageHandlers.Initialize();
+
                 initialized = true;
                 Task.Run(() =>
                 {
@@ -81,6 +84,7 @@ namespace StreamCore.YouTube
         
         internal static void Start()
         {
+            YouTubeMessageHandlers.InvokeHandler(new YouTubeMessage("youtube#onInitialize"), "");
             TaskHelper.ScheduleUniqueActionAtTime("YouTubeOAuthRefresh", () => YouTubeOAuthToken.Refresh(), YouTubeOAuthToken.expireTime.Subtract(new TimeSpan(0, 1, 0)));
             TaskHelper.ScheduleUniqueRepeatingAction("YouTubeChannelRefresh", () => YouTubeLiveBroadcast.Refresh(), 60000 * 3); // Refresh our list of broadcasts 3 minutes (this task will automatically cancel it's self once it latches onto a broadcast)
             TaskHelper.ScheduleUniqueRepeatingAction("YouTubeLiveChatRefresh", () => YouTubeLiveChat.Refresh(), 0);

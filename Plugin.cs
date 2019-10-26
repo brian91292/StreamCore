@@ -20,9 +20,8 @@ namespace StreamCore
         private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
         public static readonly string ModuleName = "Stream Core";
         public string Name => ModuleName;
-        public string Version => "2.1.0";
-        
-        
+        public string Version => "2.1.2";
+
         private static readonly object _loggerLock = new object();
         public static void Log(string text,
                 [CallerFilePath] string file = "",
@@ -38,7 +37,7 @@ namespace StreamCore
             if (Instance != null) return;
             Instance = this;
 
-            SharedMonoBehaviour.StartCoroutine(GlobalMessageHandler.CreateGlobalMessageHandlers());
+            SharedMonoBehaviour.StartCoroutine(GlobalChatHandler.InitGlobalChatHandlers());
 
             SceneManager.activeSceneChanged += SceneManager_activeSceneChanged;
             SceneManager.sceneLoaded += SceneManager_sceneLoaded;

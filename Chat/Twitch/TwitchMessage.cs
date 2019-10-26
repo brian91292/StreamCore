@@ -13,7 +13,6 @@ namespace StreamCore.Twitch
     {
         public string rawMessage { get; set; } = "";
         public string hostString { get; set; } = "";
-        public string messageType { get; set; } = "";
         public string channelName { get; set; } = "";
         public string roomId { get; set; } = "";
         public string emotes { get; set; } = "";
