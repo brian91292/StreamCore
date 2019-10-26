@@ -57,17 +57,17 @@ Implementing StreamCore into your plugin is very simple, and can be accomplished
 
 ## StreamCore version 2.x (Current Version)
 ### Step 1
-Implement `ITwitchMessageHandler` or `IYouTubeMessageHandler` into the class which you want to receive the chat callbacks
+Implement `ITwitchIntegration`, `IYouTubeIntegration`, or `IGlobalChatIntegration` into the class which you want to receive the chat callbacks
 
-**Note:** StreamCore will automatically instantiate instances of any classes that implement an `IGenericMessageHandler` in OnApplicationStart, so make sure you don't instantiate these classes anywhere in your own code!
+**Note:** StreamCore will automatically instantiate instances of any classes that implement any `IGenericChatIntegration`-based interface in OnApplicationStart, so make sure you don't instantiate these classes anywhere in your own code!
 
 ### Step 2
-Setup the chat message callbacks that were defined by the interface you implemented above.
+Setup any chat message callbacks you wish to subscribe to. For Twitch, subscribe to the events in `TwitchMessageHandlers`, and likewise for YouTube subscribe to the events in `YouTubeMessageHandlers`. Any future integrations will follow this naming convention.
 
 ### Step 3
-After you have setup the chat message callbacks and your class is ready, set the `ChatCallbacksReady` property to `true` (this is part of the `IGenericMessageHandler` interface, so you'll see what I mean once you do step 1).
+After you have setup the chat message callbacks and your class is ready, set the `IsPluginReady` property to `true` (this is part of the `IGenericChatIntegration` interface, so you'll see what I mean once you do step 1).
 
-**Note:** As long as `ChatCallbacksReady` is set to false, StreamCore will not try to establish a connection to any chat services. This means you can effectively block StreamCore from establishing any chat connections for as long as you need until your class is ready.
+**Note:** As long as `IsPluginReady` is set to false, StreamCore will not try to establish a connection to any chat services. This means you can effectively block StreamCore from establishing any chat connections for as long as you need until your class is ready.
 
 ### Example
 ```cs
@@ -78,32 +78,23 @@ using StreamCore.Twitch;
 
 namespace YourModsNamespace
 {
-    public class ChatMessageHandler : MonoBehaviour, ITwitchMessageHandler, IYouTubeMessageHandler 
+    public class ChatMessageHandler : MonoBehaviour, ITwitchIntegration, IYouTubeIntegration 
     {
-        public bool ChatCallbacksReady { get; set; } = false;
-        public Action<TwitchMessage> Twitch_OnPrivmsgReceived { get; set; }
-        public Action<TwitchMessage, TwitchChannel> Twitch_OnRoomstateReceived { get; set;  }
-        public Action<TwitchMessage> Twitch_OnUsernoticeReceived { get; set;  }
-        public Action<TwitchMessage> Twitch_OnUserstateReceived { get; set;  }
-        public Action<TwitchMessage> Twitch_OnClearchatReceived { get; set;  }
-        public Action<TwitchMessage> Twitch_OnClearmsgReceived { get; set;  }
-        public Action<TwitchMessage> Twitch_OnModeReceived { get; set;  }
-        public Action<TwitchMessage> Twitch_OnJoinReceived { get; set;  }
-        public Action<YouTubeMessage> YouTube_OnMessageReceived { get; set; }
+        public bool IsPluginReady { get; set; } = false;
         
         public void Awake()
         {
             // Setup chat message callbacks
-            Twitch_OnPrivmsgReceived += (twitchMsg) => {
+            TwitchMessageHandlers.PRIVMSG += (twitchMsg) => {
                 // do stuff with twitchMsg here
             };
             
-            YouTube_OnMessageReceived += (youtubeMsg) => {
+            YouTubeMessageHandlers.OnMessageReceived += (youtubeMsg) => {
                 // do stuff with youtubeMsg here
             };
             
             // Signal to StreamCore that this class is ready to receive chat callbacks
-            ChatCallbacksReady = true;
+            IsPluginReady = true;
         }
     }
 }
