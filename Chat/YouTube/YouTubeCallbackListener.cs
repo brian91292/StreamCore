@@ -64,34 +64,48 @@ namespace StreamCore.YouTube
         {
             var request = e.Request;
             var response = e.Response;
+            byte[] data = null;
 
-            string[] parts = request.RawUrl.Split(new char[] { '?' }, 2);
-            if (parts.Length != 2)
+            switch(request.Url.LocalPath)
             {
-                return;
-            }
-            string url = parts[0];
-            string query = parts[1];
-            
-            if(url == "/callback")
-            {
-                response.StatusCode = 307;
-                response.Redirect("about:blank");
+                case "/callback":
+                    // If we successfully exchange our code for an auth token, request a listing of live broadcast info
+                    if (YouTubeOAuthToken.Exchange(request.QueryString["code"]))
+                    {
+                        response.StatusCode = 307;
+                        response.Redirect($"http://localhost:{port}/success");
 
-                // If we successfully exchange our code for an auth token, request a listing of live broadcast info
-                if (YouTubeOAuthToken.Exchange(request.QueryString["code"]))
-                {
-                    // Start the YouTubeConnection
-                    YouTubeConnection.Start();
-                }
-                
-                // Close the response then stop the server
-                response.Close();
-                StopServer();
+                        // Start the YouTubeConnection
+                        YouTubeConnection.Start();
+                    }
+                    else
+                    {
+                        response.StatusCode = 401;
+                        response.Redirect($"http://localhost:{port}/failure");
+                    }
 
-                return;
+                    // Close the response then stop the server
+                    response.Close();
+                    break;
+                case "/success":
+                    data = Encoding.UTF8.GetBytes("Success linking YouTube account! You may now close this page and return to the game.");
+                    response.WriteContent(data);
+                    response.StatusCode = 200;
+                    response.Close();
+                    StopServer();
+                    break;
+                case "/failure":
+                    data = Encoding.UTF8.GetBytes("Failed to link YouTube account.");
+                    response.WriteContent(data);
+                    response.StatusCode = 200;
+                    response.Close();
+                    StopServer();
+                    break;
+                default:
+                    response.StatusCode = 404;
+                    StopServer();
+                    break;
             }
-            response.StatusCode = 404;
         }
     }
 }
