@@ -5,14 +5,17 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace StreamCore.Config
 {
     public class ObjectSerializer
     {
+        private static readonly Regex _configRegex = new Regex(@"(?<Name>[^=\/\/#\s]+)\s*=\s*(?<Value>"".+ ""|[^#\/\/\s]+)?\s*(([\/\/]{2,2}|[#])(?<Comment>.+)?)?", RegexOptions.Compiled | RegexOptions.Multiline);
         private static readonly ConcurrentDictionary<Type, Func<FieldInfo, string, object>> ConvertFromString = new ConcurrentDictionary<Type, Func<FieldInfo, string, object>>();
         private static readonly ConcurrentDictionary<Type, Func<FieldInfo, object, string>> ConvertToString = new ConcurrentDictionary<Type, Func<FieldInfo, object, string>>();
+        private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> Comments = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>();
         private static void InitTypeHandlers()
         {
             // String handlers
@@ -72,7 +75,7 @@ namespace StreamCore.Config
                             {
                                 Plugin.Log($"Error while parsing type {fi.FieldType.Name} from field {fi.Name}! {ex.ToString()}");
                             }
-                            //Plugin.Log($"{fi.Name}={ret.ToString()}");
+                            Plugin.Log($"{fi.Name}={ret.ToString()}");
                             return ret;
                         });
                         ConvertToString.TryAdd(fieldInfo.FieldType, (fi, v) => { return v.GetField(fi.Name).ToString(); });
@@ -89,25 +92,40 @@ namespace StreamCore.Config
 
             if (File.Exists(path))
             {
-                string[] lines = File.ReadAllLines(path);
-                foreach (string line in lines)
+                if(!Comments.TryGetValue(path, out var comments))
                 {
-                    string[] parts = line.Split(new char[] { '=' }, 2);
-                    if (parts.Length <= 1)
+                    comments = new ConcurrentDictionary<string, string>();
+                }
+                var matches = _configRegex.Matches(File.ReadAllText(path));
+                foreach (Match match in matches)
+                {
+                    // Grab the name, which has to exist or the regex wouldn't have matched
+                    var name = match.Groups["Name"].Value;
+
+                    // Check if any comments existed
+                    if(match.Groups["Comment"].Success)
+                    {
+                        // Then store them in memory so we can write them back later on
+                        comments[name] = match.Groups["Comment"].Value.TrimEnd(new char[] { '\n', '\r' });
+                    }
+
+                    // If there's no value, continue on at this point
+                    if (!match.Groups["Value"].Success)
                         continue;
+                    var value = match.Groups["Value"].Value;
 
-                    string key = parts[0];
-                    string value = parts[1];
-
-                    var fieldInfo = obj.GetType().GetField(key);
-                    // Invoke our convertFromString method if it exists
+                    // Otherwise, read the value in with the appropriate handler
+                    var fieldInfo = obj.GetType().GetField(name);
+                    // Invoke our ConvertFromString method if it exists
                     if (!ConvertFromString.TryGetValue(fieldInfo.FieldType, out var convertFromString))
                     {
                         // If not, call the default conversion handler and pray for the best
                         ConvertFromString.TryGetValue(typeof(object), out convertFromString);
                     }
+                    // Call the appropriate handler based on the type
                     fieldInfo.SetValue(obj, convertFromString.Invoke(fieldInfo, value));
                 }
+                Comments[path] = comments;
             }
         }
 
@@ -115,6 +133,8 @@ namespace StreamCore.Config
         {
             if (ConvertToString.Count == 0)
                 InitTypeHandlers();
+
+            Comments.TryGetValue(path, out var commentDict);
 
             List<string> serializedClass = new List<string>();
             foreach (var field in obj.GetType().GetFields())
@@ -125,7 +145,8 @@ namespace StreamCore.Config
                     // If not, call the default conversion handler and pray for the best
                     ConvertToString.TryGetValue(typeof(object), out convertToString);
                 }
-                serializedClass.Add($"{field.Name}={convertToString.Invoke(field, obj)}");
+                commentDict.TryGetValue(field.Name, out var comment);
+                serializedClass.Add($"{field.Name}={convertToString.Invoke(field, obj)}{(comment!=null?" //"+comment:"")}");
             }
             if (path != string.Empty && serializedClass.Count > 0)
             {
