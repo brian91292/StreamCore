@@ -72,7 +72,7 @@ namespace StreamCore.Config
                             {
                                 Plugin.Log($"Error while parsing type {fi.FieldType.Name} from field {fi.Name}! {ex.ToString()}");
                             }
-                            Plugin.Log($"{fi.Name}={ret.ToString()}");
+                            //Plugin.Log($"{fi.Name}={ret.ToString()}");
                             return ret;
                         });
                         ConvertToString.TryAdd(fieldInfo.FieldType, (fi, v) => { return v.GetField(fi.Name).ToString(); });
