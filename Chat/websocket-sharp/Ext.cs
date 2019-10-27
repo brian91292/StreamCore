@@ -160,36 +160,34 @@ namespace WebSocketSharp
              || value == "POST";
     }
 
-    private static void times (this ulong n, Action action)
-    {
-      for (ulong i = 0; i < n; i++)
-        action ();
-    }
-
     #endregion
 
     #region Internal Methods
 
     internal static byte[] Append (this ushort code, string reason)
     {
-      var ret = code.InternalToByteArray (ByteOrder.Big);
-      if (reason != null && reason.Length > 0) {
-        var buff = new List<byte> (ret);
-        buff.AddRange (Encoding.UTF8.GetBytes (reason));
-        ret = buff.ToArray ();
-      }
+      var bytes = code.InternalToByteArray (ByteOrder.Big);
 
-      return ret;
+      if (reason == null || reason.Length == 0)
+        return bytes;
+
+      var buff = new List<byte> (bytes);
+      buff.AddRange (Encoding.UTF8.GetBytes (reason));
+
+      return buff.ToArray ();
     }
 
-    internal static void Close (this HttpListenerResponse response, HttpStatusCode code)
+    internal static void Close (
+      this HttpListenerResponse response, HttpStatusCode code
+    )
     {
       response.StatusCode = (int) code;
       response.OutputStream.Close ();
     }
 
     internal static void CloseWithAuthChallenge (
-      this HttpListenerResponse response, string challenge)
+      this HttpListenerResponse response, string challenge
+    )
     {
       response.Headers.InternalSet ("WWW-Authenticate", challenge, true);
       response.Close (HttpStatusCode.Unauthorized);
@@ -570,22 +568,28 @@ namespace WebSocketSharp
       return unquote ? val.Unquote () : val;
     }
 
-    internal static byte[] InternalToByteArray (this ushort value, ByteOrder order)
+    internal static byte[] InternalToByteArray (
+      this ushort value, ByteOrder order
+    )
     {
-      var bytes = BitConverter.GetBytes (value);
-      if (!order.IsHostOrder ())
-        Array.Reverse (bytes);
+      var ret = BitConverter.GetBytes (value);
 
-      return bytes;
+      if (!order.IsHostOrder ())
+        Array.Reverse (ret);
+
+      return ret;
     }
 
-    internal static byte[] InternalToByteArray (this ulong value, ByteOrder order)
+    internal static byte[] InternalToByteArray (
+      this ulong value, ByteOrder order
+    )
     {
-      var bytes = BitConverter.GetBytes (value);
-      if (!order.IsHostOrder ())
-        Array.Reverse (bytes);
+      var ret = BitConverter.GetBytes (value);
 
-      return bytes;
+      if (!order.IsHostOrder ())
+        Array.Reverse (ret);
+
+      return ret;
     }
 
     internal static bool IsCompressionExtension (
@@ -1236,16 +1240,6 @@ namespace WebSocketSharp
       return HttpUtility.UrlEncode (value, encoding);
     }
 
-    internal static string UTF8Decode (this byte[] bytes)
-    {
-      try {
-        return Encoding.UTF8.GetString (bytes);
-      }
-      catch {
-        return null;
-      }
-    }
-
     internal static void WriteBytes (
       this Stream stream, byte[] bytes, int bufferLength
     )
@@ -1781,160 +1775,230 @@ namespace WebSocketSharp
     }
 
     /// <summary>
-    /// Executes the specified <see cref="Action"/> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// An <see cref="int"/> is the number of times to execute.
+    /// An <see cref="int"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <see cref="Action"/> delegate that references the method(s) to execute.
+    /// An <see cref="Action"/> delegate to execute.
     /// </param>
     public static void Times (this int n, Action action)
     {
-      if (n > 0 && action != null)
-        ((ulong) n).times (action);
+      if (n <= 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (int i = 0; i < n; i++)
+        action ();
     }
 
     /// <summary>
-    /// Executes the specified <see cref="Action"/> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// A <see cref="long"/> is the number of times to execute.
+    /// A <see cref="long"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <see cref="Action"/> delegate that references the method(s) to execute.
+    /// An <see cref="Action"/> delegate to execute.
     /// </param>
     public static void Times (this long n, Action action)
     {
-      if (n > 0 && action != null)
-        ((ulong) n).times (action);
+      if (n <= 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (long i = 0; i < n; i++)
+        action ();
     }
 
     /// <summary>
-    /// Executes the specified <see cref="Action"/> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// A <see cref="uint"/> is the number of times to execute.
+    /// A <see cref="uint"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <see cref="Action"/> delegate that references the method(s) to execute.
+    /// An <see cref="Action"/> delegate to execute.
     /// </param>
     public static void Times (this uint n, Action action)
     {
-      if (n > 0 && action != null)
-        ((ulong) n).times (action);
+      if (n == 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (uint i = 0; i < n; i++)
+        action ();
     }
 
     /// <summary>
-    /// Executes the specified <see cref="Action"/> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// A <see cref="ulong"/> is the number of times to execute.
+    /// A <see cref="ulong"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <see cref="Action"/> delegate that references the method(s) to execute.
+    /// An <see cref="Action"/> delegate to execute.
     /// </param>
     public static void Times (this ulong n, Action action)
     {
-      if (n > 0 && action != null)
-        n.times (action);
+      if (n == 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (ulong i = 0; i < n; i++)
+        action ();
     }
 
     /// <summary>
-    /// Executes the specified <c>Action&lt;int&gt;</c> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// An <see cref="int"/> is the number of times to execute.
+    /// An <see cref="int"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <c>Action&lt;int&gt;</c> delegate that references the method(s) to execute.
-    /// An <see cref="int"/> parameter to pass to the method(s) is the zero-based count of
-    /// iteration.
+    ///   <para>
+    ///   An <c>Action&lt;int&gt;</c> delegate to execute.
+    ///   </para>
+    ///   <para>
+    ///   The <see cref="int"/> parameter is the zero-based count of iteration.
+    ///   </para>
     /// </param>
     public static void Times (this int n, Action<int> action)
     {
-      if (n > 0 && action != null)
-        for (int i = 0; i < n; i++)
-          action (i);
+      if (n <= 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (int i = 0; i < n; i++)
+        action (i);
     }
 
     /// <summary>
-    /// Executes the specified <c>Action&lt;long&gt;</c> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// A <see cref="long"/> is the number of times to execute.
+    /// A <see cref="long"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <c>Action&lt;long&gt;</c> delegate that references the method(s) to execute.
-    /// A <see cref="long"/> parameter to pass to the method(s) is the zero-based count of
-    /// iteration.
+    ///   <para>
+    ///   An <c>Action&lt;long&gt;</c> delegate to execute.
+    ///   </para>
+    ///   <para>
+    ///   The <see cref="long"/> parameter is the zero-based count of iteration.
+    ///   </para>
     /// </param>
     public static void Times (this long n, Action<long> action)
     {
-      if (n > 0 && action != null)
-        for (long i = 0; i < n; i++)
-          action (i);
+      if (n <= 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (long i = 0; i < n; i++)
+        action (i);
     }
 
     /// <summary>
-    /// Executes the specified <c>Action&lt;uint&gt;</c> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// A <see cref="uint"/> is the number of times to execute.
+    /// A <see cref="uint"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <c>Action&lt;uint&gt;</c> delegate that references the method(s) to execute.
-    /// A <see cref="uint"/> parameter to pass to the method(s) is the zero-based count of
-    /// iteration.
+    ///   <para>
+    ///   An <c>Action&lt;uint&gt;</c> delegate to execute.
+    ///   </para>
+    ///   <para>
+    ///   The <see cref="uint"/> parameter is the zero-based count of iteration.
+    ///   </para>
     /// </param>
     public static void Times (this uint n, Action<uint> action)
     {
-      if (n > 0 && action != null)
-        for (uint i = 0; i < n; i++)
-          action (i);
+      if (n == 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (uint i = 0; i < n; i++)
+        action (i);
     }
 
     /// <summary>
-    /// Executes the specified <c>Action&lt;ulong&gt;</c> delegate <paramref name="n"/> times.
+    /// Executes the specified delegate <paramref name="n"/> times.
     /// </summary>
     /// <param name="n">
-    /// A <see cref="ulong"/> is the number of times to execute.
+    /// A <see cref="ulong"/> that specifies the number of times to execute.
     /// </param>
     /// <param name="action">
-    /// An <c>Action&lt;ulong&gt;</c> delegate that references the method(s) to execute.
-    /// A <see cref="ulong"/> parameter to pass to this method(s) is the zero-based count of
-    /// iteration.
+    ///   <para>
+    ///   An <c>Action&lt;ulong&gt;</c> delegate to execute.
+    ///   </para>
+    ///   <para>
+    ///   The <see cref="ulong"/> parameter is the zero-based count of iteration.
+    ///   </para>
     /// </param>
     public static void Times (this ulong n, Action<ulong> action)
     {
-      if (n > 0 && action != null)
-        for (ulong i = 0; i < n; i++)
-          action (i);
+      if (n == 0)
+        return;
+
+      if (action == null)
+        return;
+
+      for (ulong i = 0; i < n; i++)
+        action (i);
     }
 
     /// <summary>
-    /// Converts the specified array of <see cref="byte"/> to the specified type data.
+    /// Converts the specified byte array to the specified type value.
     /// </summary>
     /// <returns>
-    /// A T converted from <paramref name="source"/>, or a default value of
-    /// T if <paramref name="source"/> is an empty array of <see cref="byte"/> or
-    /// if the type of T isn't <see cref="bool"/>, <see cref="char"/>, <see cref="double"/>,
-    /// <see cref="float"/>, <see cref="int"/>, <see cref="long"/>, <see cref="short"/>,
-    /// <see cref="uint"/>, <see cref="ulong"/>, or <see cref="ushort"/>.
+    ///   <para>
+    ///   A T converted from <paramref name="source"/>.
+    ///   </para>
+    ///   <para>
+    ///   The default value of T if not converted.
+    ///   </para>
     /// </returns>
     /// <param name="source">
     /// An array of <see cref="byte"/> to convert.
     /// </param>
     /// <param name="sourceOrder">
-    /// One of the <see cref="ByteOrder"/> enum values, specifies the byte order of
-    /// <paramref name="source"/>.
+    ///   <para>
+    ///   One of the <see cref="ByteOrder"/> enum values.
+    ///   </para>
+    ///   <para>
+    ///   It specifies the byte order of <paramref name="source"/>.
+    ///   </para>
     /// </param>
     /// <typeparam name="T">
-    /// The type of the return. The T must be a value type.
+    ///   <para>
+    ///   The type of the return.
+    ///   </para>
+    ///   <para>
+    ///   <see cref="bool"/>, <see cref="char"/>, <see cref="double"/>,
+    ///   <see cref="float"/>, <see cref="int"/>, <see cref="long"/>,
+    ///   <see cref="short"/>, <see cref="uint"/>, <see cref="ulong"/>,
+    ///   or <see cref="ushort"/>.
+    ///   </para>
     /// </typeparam>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="source"/> is <see langword="null"/>.
     /// </exception>
+    [Obsolete ("This method will be removed.")]
     public static T To<T> (this byte[] source, ByteOrder sourceOrder)
       where T : struct
     {
@@ -1945,33 +2009,33 @@ namespace WebSocketSharp
         return default (T);
 
       var type = typeof (T);
-      var buff = source.ToHostOrder (sourceOrder);
+      var val = source.ToHostOrder (sourceOrder);
 
       return type == typeof (Boolean)
-             ? (T)(object) BitConverter.ToBoolean (buff, 0)
+             ? (T)(object) BitConverter.ToBoolean (val, 0)
              : type == typeof (Char)
-               ? (T)(object) BitConverter.ToChar (buff, 0)
+               ? (T)(object) BitConverter.ToChar (val, 0)
                : type == typeof (Double)
-                 ? (T)(object) BitConverter.ToDouble (buff, 0)
+                 ? (T)(object) BitConverter.ToDouble (val, 0)
                  : type == typeof (Int16)
-                   ? (T)(object) BitConverter.ToInt16 (buff, 0)
+                   ? (T)(object) BitConverter.ToInt16 (val, 0)
                    : type == typeof (Int32)
-                     ? (T)(object) BitConverter.ToInt32 (buff, 0)
+                     ? (T)(object) BitConverter.ToInt32 (val, 0)
                      : type == typeof (Int64)
-                       ? (T)(object) BitConverter.ToInt64 (buff, 0)
+                       ? (T)(object) BitConverter.ToInt64 (val, 0)
                        : type == typeof (Single)
-                         ? (T)(object) BitConverter.ToSingle (buff, 0)
+                         ? (T)(object) BitConverter.ToSingle (val, 0)
                          : type == typeof (UInt16)
-                           ? (T)(object) BitConverter.ToUInt16 (buff, 0)
+                           ? (T)(object) BitConverter.ToUInt16 (val, 0)
                            : type == typeof (UInt32)
-                             ? (T)(object) BitConverter.ToUInt32 (buff, 0)
+                             ? (T)(object) BitConverter.ToUInt32 (val, 0)
                              : type == typeof (UInt64)
-                               ? (T)(object) BitConverter.ToUInt64 (buff, 0)
+                               ? (T)(object) BitConverter.ToUInt64 (val, 0)
                                : default (T);
     }
 
     /// <summary>
-    /// Converts the specified <paramref name="value"/> to an array of <see cref="byte"/>.
+    /// Converts the specified value to a byte array.
     /// </summary>
     /// <returns>
     /// An array of <see cref="byte"/> converted from <paramref name="value"/>.
@@ -1980,11 +2044,25 @@ namespace WebSocketSharp
     /// A T to convert.
     /// </param>
     /// <param name="order">
-    /// One of the <see cref="ByteOrder"/> enum values, specifies the byte order of the return.
+    ///   <para>
+    ///   One of the <see cref="ByteOrder"/> enum values.
+    ///   </para>
+    ///   <para>
+    ///   It specifies the byte order of the return.
+    ///   </para>
     /// </param>
     /// <typeparam name="T">
-    /// The type of <paramref name="value"/>. The T must be a value type.
+    ///   <para>
+    ///   The type of <paramref name="value"/>.
+    ///   </para>
+    ///   <para>
+    ///   <see cref="bool"/>, <see cref="byte"/>, <see cref="char"/>,
+    ///   <see cref="double"/>, <see cref="float"/>, <see cref="int"/>,
+    ///   <see cref="long"/>, <see cref="short"/>, <see cref="uint"/>,
+    ///   <see cref="ulong"/>, or <see cref="ushort"/>.
+    ///   </para>
     /// </typeparam>
+    [Obsolete ("This method will be removed.")]
     public static byte[] ToByteArray<T> (this T value, ByteOrder order)
       where T : struct
     {
@@ -2013,8 +2091,10 @@ namespace WebSocketSharp
                                       ? BitConverter.GetBytes ((UInt64)(object) value)
                                       : WebSocket.EmptyBytes;
 
-      if (bytes.Length > 1 && !order.IsHostOrder ())
-        Array.Reverse (bytes);
+      if (bytes.Length > 1) {
+        if (!order.IsHostOrder ())
+          Array.Reverse (bytes);
+      }
 
       return bytes;
     }
@@ -2029,9 +2109,9 @@ namespace WebSocketSharp
     ///   <paramref name="source"/>.
     ///   </para>
     ///   <para>
-    ///   Or <paramref name="source"/> if the number of elements in it
-    ///   is less than 2 or <paramref name="sourceOrder"/> is same as
-    ///   host byte order.
+    ///   <paramref name="source"/> if the number of elements in
+    ///   it is less than 2 or <paramref name="sourceOrder"/> is
+    ///   same as host byte order.
     ///   </para>
     /// </returns>
     /// <param name="source">
@@ -2056,11 +2136,14 @@ namespace WebSocketSharp
       if (source.Length < 2)
         return source;
 
-      return !sourceOrder.IsHostOrder () ? source.Reverse () : source;
+      if (sourceOrder.IsHostOrder ())
+        return source;
+
+      return source.Reverse ();
     }
 
     /// <summary>
-    /// Converts the specified array to a <see cref="string"/>.
+    /// Converts the specified array to a string.
     /// </summary>
     /// <returns>
     ///   <para>
@@ -2097,11 +2180,12 @@ namespace WebSocketSharp
         separator = String.Empty;
 
       var buff = new StringBuilder (64);
+      var end = len - 1;
 
-      for (var i = 0; i < len - 1; i++)
+      for (var i = 0; i < end; i++)
         buff.AppendFormat ("{0}{1}", array[i], separator);
 
-      buff.Append (array[len - 1].ToString ());
+      buff.Append (array[end].ToString ());
       return buff.ToString ();
     }
 
@@ -2130,15 +2214,14 @@ namespace WebSocketSharp
     }
 
     /// <summary>
-    /// Writes and sends the specified <paramref name="content"/> data with the specified
-    /// <see cref="HttpListenerResponse"/>.
+    /// Sends the specified content data with the HTTP response.
     /// </summary>
     /// <param name="response">
-    /// A <see cref="HttpListenerResponse"/> that represents the HTTP response used to
-    /// send the content data.
+    /// A <see cref="HttpListenerResponse"/> that represents the HTTP response
+    /// used to send the content data.
     /// </param>
     /// <param name="content">
-    /// An array of <see cref="byte"/> that represents the content data to send.
+    /// An array of <see cref="byte"/> that specifies the content data to send.
     /// </param>
     /// <exception cref="ArgumentNullException">
     ///   <para>
@@ -2151,7 +2234,10 @@ namespace WebSocketSharp
     ///   <paramref name="content"/> is <see langword="null"/>.
     ///   </para>
     /// </exception>
-    public static void WriteContent (this HttpListenerResponse response, byte[] content)
+    [Obsolete ("This method will be removed.")]
+    public static void WriteContent (
+      this HttpListenerResponse response, byte[] content
+    )
     {
       if (response == null)
         throw new ArgumentNullException ("response");
@@ -2166,7 +2252,9 @@ namespace WebSocketSharp
       }
 
       response.ContentLength64 = len;
+
       var output = response.OutputStream;
+
       if (len <= Int32.MaxValue)
         output.Write (content, 0, (int) len);
       else

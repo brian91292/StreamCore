@@ -1134,15 +1134,14 @@ namespace WebSocketSharp
 
       _readyState = WebSocketState.Closed;
 
-      var e = new CloseEventArgs (payloadData);
-      e.WasClean = res;
+      var e = new CloseEventArgs (payloadData, res);
 
       try {
         OnClose.Emit (this, e);
       }
       catch (Exception ex) {
-        _logger.Error (ex.ToString ());
-        error ("An error has occurred during the OnClose event.", ex);
+        _logger.Error (ex.Message);
+        _logger.Debug (ex.ToString ());
       }
     }
 
@@ -1789,7 +1788,7 @@ namespace WebSocketSharp
 
       _readyState = WebSocketState.Closed;
 
-      var e = new CloseEventArgs (code, reason);
+      var e = new CloseEventArgs ((ushort) code, reason, false);
 
       try {
         OnClose.Emit (this, e);
@@ -2322,14 +2321,14 @@ namespace WebSocketSharp
 
       _readyState = WebSocketState.Closed;
 
-      var e = new CloseEventArgs (payloadData);
-      e.WasClean = res;
+      var e = new CloseEventArgs (payloadData, res);
 
       try {
         OnClose.Emit (this, e);
       }
       catch (Exception ex) {
-        _logger.Error (ex.ToString ());
+        _logger.Error (ex.Message);
+        _logger.Debug (ex.ToString ());
       }
     }
 

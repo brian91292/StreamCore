@@ -47,7 +47,7 @@ namespace WebSocketSharp.Net
   /// </summary>
   [Serializable]
   public class CookieException : FormatException, ISerializable
-  {
+    {
     #region Internal Constructors
 
     internal CookieException (string message)

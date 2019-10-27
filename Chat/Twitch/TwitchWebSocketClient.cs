@@ -110,7 +110,6 @@ namespace StreamCore.Twitch
         private static void Instance_ConfigChangedEvent(TwitchLoginConfig obj)
         {
             LoggedIn = true;
-
             if (Connected)
             {
                 if (TwitchLoginConfig.Instance.TwitchChannelName != _lastChannel)
@@ -213,9 +212,6 @@ namespace StreamCore.Twitch
                         else
                             _ws.Send($"PASS {TwitchLoginConfig.Instance.TwitchOAuthToken}");
                         _ws.Send($"NICK {username}");
-
-                        if (TwitchLoginConfig.Instance.TwitchChannelName != String.Empty)
-                            JoinChannel(TwitchLoginConfig.Instance.TwitchChannelName);
 
                         // Display a message in the chat informing the user whether or not the connection to the channel was successful
                         ConnectionTime = DateTime.Now;
@@ -466,11 +462,18 @@ namespace StreamCore.Twitch
                         }
 
                         string type = matches[i].Groups["MessageType"].Value;
-                        //Plugin.Log($"MessageType: {type}, Message: {rawMessage}");
+                        // Respones to ping
                         if (type == "PING")
                         {
                             Plugin.Log("Ping... Pong.");
                             _ws.Send("PONG :tmi.twitch.tv");
+                            continue;
+                        }
+                        // Successful login
+                        else if(type == "001")
+                        {
+                            if (TwitchLoginConfig.Instance.TwitchChannelName != String.Empty)
+                                JoinChannel(TwitchLoginConfig.Instance.TwitchChannelName);
                             continue;
                         }
 
@@ -487,20 +490,8 @@ namespace StreamCore.Twitch
                         if (matches[i].Groups["ChannelName"].Success)
                             twitchMsg.channelName = matches[i].Groups["ChannelName"].Value.Trim(new char[] { '#' });
 
-                        // Skip any command messages, as if we're encountering one it came from the StreamCore client and would never be received by other clients (since it's a command)
-                        if (twitchMsg.message.StartsWith("/"))
-                            return;
-
-                        // If this is a callback from the send function, populate it with our twitch users info/the current room info
-                        if (assemblyHash != string.Empty)
-                        {
-                            twitchMsg.user = OurTwitchUser;
-                            twitchMsg.hostString = OurTwitchUser.displayName;
-                            Plugin.Log($"Assembly hash is {assemblyHash}");
-                        }
-
                         // If the login fails, disconnect the websocket
-                        if (twitchMsg.messageType == "NOTICE")
+                        if (type == "NOTICE")
                         {
                             if (twitchMsg.message.StartsWith("Login authentication failed"))
                             {
@@ -514,8 +505,22 @@ namespace StreamCore.Twitch
                                 {
                                     Plugin.Log(ex.ToString());
                                 }
+                                continue;
                             }
                         }
+
+                        // Skip any command messages, as if we're encountering one it came from the StreamCore client and would never be received by other clients (since it's a command)
+                        if (twitchMsg.message.StartsWith("/"))
+                            return;
+
+                        // If this is a callback from the send function, populate it with our twitch users info/the current room info
+                        if (assemblyHash != string.Empty)
+                        {
+                            twitchMsg.user = OurTwitchUser;
+                            twitchMsg.hostString = OurTwitchUser.displayName;
+                            Plugin.Log($"Assembly hash is {assemblyHash}");
+                        }
+
                         // Invoke twitch message callbacks
                         TwitchMessageHandlers.InvokeHandler(twitchMsg, assemblyHash);
                     }

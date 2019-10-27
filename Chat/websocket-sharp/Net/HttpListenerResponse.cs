@@ -121,14 +121,20 @@ namespace WebSocketSharp.Net
     #region Public Properties
 
     /// <summary>
-    /// Gets or sets the encoding for the entity body data included in the response.
+    /// Gets or sets the encoding for the entity body data included in
+    /// the response.
     /// </summary>
     /// <value>
-    /// A <see cref="Encoding"/> that represents the encoding for the entity body data,
-    /// or <see langword="null"/> if no encoding is specified.
+    ///   <para>
+    ///   A <see cref="Encoding"/> that represents the encoding for
+    ///   the entity body data.
+    ///   </para>
+    ///   <para>
+    ///   <see langword="null"/> if no encoding is specified.
+    ///   </para>
     /// </value>
     /// <exception cref="ObjectDisposedException">
-    /// This object is closed.
+    /// This instance is closed.
     /// </exception>
     public Encoding ContentEncoding {
       get {
@@ -136,7 +142,9 @@ namespace WebSocketSharp.Net
       }
 
       set {
-        checkDisposed ();
+        if (_disposed)
+          throw new ObjectDisposedException (GetType ().ToString ());
+
         _contentEncoding = value;
       }
     }
@@ -174,15 +182,22 @@ namespace WebSocketSharp.Net
     /// Gets or sets the media type of the entity body included in the response.
     /// </summary>
     /// <value>
-    /// A <see cref="string"/> that represents the media type of the entity body,
-    /// or <see langword="null"/> if no media type is specified. This value is
-    /// used for the value of the Content-Type entity-header.
+    ///   <para>
+    ///   A <see cref="string"/> that represents the media type of the entity
+    ///   body.
+    ///   </para>
+    ///   <para>
+    ///   It is used for the value of the Content-Type entity-header.
+    ///   </para>
+    ///   <para>
+    ///   <see langword="null"/> if no media type is specified.
+    ///   </para>
     /// </value>
     /// <exception cref="ArgumentException">
     /// The value specified for a set operation is empty.
     /// </exception>
     /// <exception cref="ObjectDisposedException">
-    /// This object is closed.
+    /// This instance is closed.
     /// </exception>
     public string ContentType {
       get {
@@ -190,7 +205,9 @@ namespace WebSocketSharp.Net
       }
 
       set {
-        checkDisposed ();
+        if (_disposed)
+          throw new ObjectDisposedException (GetType ().ToString ());
+
         if (value != null && value.Length == 0)
           throw new ArgumentException ("An empty string.", "value");
 
@@ -262,18 +279,24 @@ namespace WebSocketSharp.Net
     }
 
     /// <summary>
-    /// Gets a <see cref="Stream"/> to use to write the entity body data.
+    /// Gets a stream instance to which the entity body data can be written.
     /// </summary>
     /// <value>
-    /// A <see cref="Stream"/> to use to write the entity body data.
+    /// A <see cref="Stream"/> instance to which the entity body data can be
+    /// written.
     /// </value>
     /// <exception cref="ObjectDisposedException">
-    /// This object is closed.
+    /// This instance is closed.
     /// </exception>
     public Stream OutputStream {
       get {
-        checkDisposed ();
-        return _outputStream ?? (_outputStream = _context.Connection.GetResponseStream ());
+        if (_disposed)
+          throw new ObjectDisposedException (GetType ().ToString ());
+
+        if (_outputStream == null)
+          _outputStream = _context.Connection.GetResponseStream ();
+
+        return _outputStream;
       }
     }
 
@@ -314,17 +337,23 @@ namespace WebSocketSharp.Net
     }
 
     /// <summary>
-    /// Gets or sets the URL to which the client is redirected to locate a requested resource.
+    /// Gets or sets the URL to which the client is redirected to locate
+    /// a requested resource.
     /// </summary>
     /// <value>
-    /// A <see cref="string"/> that represents the value of the Location response-header,
-    /// or <see langword="null"/> if no redirect location is specified.
+    ///   <para>
+    ///   A <see cref="string"/> that represents the value of the Location
+    ///   response-header.
+    ///   </para>
+    ///   <para>
+    ///   <see langword="null"/> if no redirect location is specified.
+    ///   </para>
     /// </value>
     /// <exception cref="ArgumentException">
-    /// The value specified for a set operation isn't an absolute URL.
+    /// The value specified for a set operation is not an absolute URL.
     /// </exception>
     /// <exception cref="ObjectDisposedException">
-    /// This object is closed.
+    /// This instance is closed.
     /// </exception>
     public string RedirectLocation {
       get {
@@ -332,14 +361,19 @@ namespace WebSocketSharp.Net
       }
 
       set {
-        checkDisposed ();
+        if (_disposed)
+          throw new ObjectDisposedException (GetType ().ToString ());
+
         if (value == null) {
           _location = null;
           return;
         }
 
-        Uri uri = null;
-        if (!value.MaybeUri () || !Uri.TryCreate (value, UriKind.Absolute, out uri))
+        if (!value.MaybeUri ())
+          throw new ArgumentException ("Not an absolute URL.", "value");
+
+        Uri uri;
+        if (!Uri.TryCreate (value, UriKind.Absolute, out uri))
           throw new ArgumentException ("Not an absolute URL.", "value");
 
         _location = value;
@@ -459,12 +493,6 @@ namespace WebSocketSharp.Net
           return true;
 
       return false;
-    }
-
-    private void checkDisposed ()
-    {
-      if (_disposed)
-        throw new ObjectDisposedException (GetType ().ToString ());
     }
 
     private void checkDisposedOrHeadersSent ()
@@ -678,7 +706,7 @@ namespace WebSocketSharp.Net
 
     /// <summary>
     /// Returns the response to the client and releases the resources used by
-    /// this <see cref="HttpListenerResponse"/> instance.
+    /// this instance.
     /// </summary>
     public void Close ()
     {
@@ -689,30 +717,33 @@ namespace WebSocketSharp.Net
     }
 
     /// <summary>
-    /// Returns the response with the specified array of <see cref="byte"/> to the client and
-    /// releases the resources used by this <see cref="HttpListenerResponse"/> instance.
+    /// Returns the response with the specified entity body data to the client
+    /// and releases the resources used by this instance.
     /// </summary>
     /// <param name="responseEntity">
-    /// An array of <see cref="byte"/> that contains the response entity body data.
+    /// An array of <see cref="byte"/> that contains the entity body data.
     /// </param>
     /// <param name="willBlock">
-    /// <c>true</c> if this method blocks execution while flushing the stream to the client;
-    /// otherwise, <c>false</c>.
+    /// <c>true</c> if this method blocks execution while flushing the stream to
+    /// the client; otherwise, <c>false</c>.
     /// </param>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="responseEntity"/> is <see langword="null"/>.
     /// </exception>
     /// <exception cref="ObjectDisposedException">
-    /// This object is closed.
+    /// This instance is closed.
     /// </exception>
     public void Close (byte[] responseEntity, bool willBlock)
     {
-      checkDisposed ();
+      if (_disposed)
+        throw new ObjectDisposedException (GetType ().ToString ());
+
       if (responseEntity == null)
         throw new ArgumentNullException ("responseEntity");
 
       var len = responseEntity.Length;
       var output = OutputStream;
+
       if (willBlock) {
         output.Write (responseEntity, 0, len);
         close (false);
@@ -728,7 +759,8 @@ namespace WebSocketSharp.Net
           output.EndWrite (ar);
           close (false);
         },
-        null);
+        null
+      );
     }
 
     /// <summary>
