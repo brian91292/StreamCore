@@ -200,9 +200,6 @@ namespace StreamCore.Twitch
                 {
                     _ws.OnOpen += (sender, e) =>
                     {
-                        // Reset our reconnect cooldown timer
-                        _reconnectCooldown = 1000;
-
                         Plugin.Log("Connected to Twitch!");
                         _ws.Send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
 
@@ -242,6 +239,7 @@ namespace StreamCore.Twitch
 
                     _ws.OnError += (sender, e) =>
                     {
+                        LoggedIn = false;
                         Plugin.Log($"An error occured in the twitch connection! Error: {e.Message}, Exception: {e.Exception}");
                         Connected = false;
                     };
@@ -472,8 +470,13 @@ namespace StreamCore.Twitch
                         // Successful login
                         else if(type == "001")
                         {
+                            // If a channel has been defined, try to join it
                             if (TwitchLoginConfig.Instance.TwitchChannelName != String.Empty)
                                 JoinChannel(TwitchLoginConfig.Instance.TwitchChannelName);
+
+                            // Reset our reconnect cooldown timer
+                            _reconnectCooldown = 1000;
+
                             continue;
                         }
 

@@ -2184,7 +2184,7 @@ namespace WebSocketSharp
             },
             ex => {
               _logger.Fatal (ex.ToString ());
-              fatal ("An exception has occurred while receiving.", ex);
+              error ("An exception has occurred while receiving.", ex);
             }
           );
 
