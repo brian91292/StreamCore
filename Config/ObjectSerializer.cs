@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,39 +9,77 @@ using System.Threading.Tasks;
 
 namespace StreamCore.Config
 {
-    class ObjectSerializer 
+    public class ObjectSerializer
     {
-        private static Dictionary<Type, Func<string, object>> ConvertFromString = new Dictionary<Type, Func<string, object>>();
-        private static Dictionary<Type, Func<FieldInfo, object, string>> ConvertToString = new Dictionary<Type, Func<FieldInfo, object, string>>();
+        private static readonly ConcurrentDictionary<Type, Func<FieldInfo, string, object>> ConvertFromString = new ConcurrentDictionary<Type, Func<FieldInfo, string, object>>();
+        private static readonly ConcurrentDictionary<Type, Func<FieldInfo, object, string>> ConvertToString = new ConcurrentDictionary<Type, Func<FieldInfo, object, string>>();
         private static void InitTypeHandlers()
         {
             // String handlers
-            ConvertFromString.Add(typeof(string), (value) => { return (value.StartsWith("\"") && value.EndsWith("\"") ? value.Substring(1, value.Length - 2) : value); });
-            ConvertToString.Add(typeof(string), (fieldInfo, obj) => { return $"\"{((string)obj.GetField(fieldInfo.Name))}\""; });
-
-            // Short handlers
-            ConvertFromString.Add(typeof(short), (value) => { short.TryParse(value, out var ret); return ret; });
-            ConvertToString.Add(typeof(short), (fieldInfo, obj) => { return ((short)obj.GetField(fieldInfo.Name)).ToString(); });
-
-            // Int handlers
-            ConvertFromString.Add(typeof(int), (value) => { int.TryParse(value, out var ret); return ret; });
-            ConvertToString.Add(typeof(int), (fieldInfo, obj) => { return ((int)obj.GetField(fieldInfo.Name)).ToString(); });
-
-            // Long handlers
-            ConvertFromString.Add(typeof(long), (value) => { long.TryParse(value, out var ret); return ret; });
-            ConvertToString.Add(typeof(long), (fieldInfo, obj) => { return ((long)obj.GetField(fieldInfo.Name)).ToString(); });
-
-            // Float handlers
-            ConvertFromString.Add(typeof(float), (value) => { float.TryParse(value, out var ret); return ret; });
-            ConvertToString.Add(typeof(float), (fieldInfo, obj) => { return ((float)obj.GetField(fieldInfo.Name)).ToString(); });
-
-            // Double handlers
-            ConvertFromString.Add(typeof(double), (value) => { double.TryParse(value, out var ret); return ret; });
-            ConvertToString.Add(typeof(double), (fieldInfo, obj) => { return ((double)obj.GetField(fieldInfo.Name)).ToString(); });
+            ConvertFromString.TryAdd(typeof(string), (fieldInfo, value) => { return (value.StartsWith("\"") && value.EndsWith("\"") ? value.Substring(1, value.Length - 2) : value); });
+            ConvertToString.TryAdd(typeof(string), (fieldInfo, obj) => { return $"\"{((string)obj.GetField(fieldInfo.Name))}\""; });
 
             // Bool handlers
-            ConvertFromString.Add(typeof(bool), (value) => { return (value.Equals("true", StringComparison.CurrentCultureIgnoreCase) || value.Equals("1")); });
-            ConvertToString.Add(typeof(bool), (fieldInfo, obj) => { return ((bool)obj.GetField(fieldInfo.Name)).ToString(); });
+            ConvertFromString.TryAdd(typeof(bool), (fieldInfo, value) => { return (value.Equals("true", StringComparison.CurrentCultureIgnoreCase) || value.Equals("1")); });
+            ConvertToString.TryAdd(typeof(bool), (fieldInfo, obj) => { return ((bool)obj.GetField(fieldInfo.Name)).ToString(); });
+
+            // Generic handler
+            ConvertFromString.TryAdd(typeof(object), (fieldInfo, value) =>
+            {
+                // If the generic handler was called, try to figure out how to convert the data
+                if(CreateDynamicFieldConverter(fieldInfo))
+                {
+                    return ConvertFromString[fieldInfo.FieldType].DynamicInvoke(fieldInfo, value);
+                }
+                return null;
+            });
+            ConvertToString.TryAdd(typeof(object), (fieldInfo, obj) => 
+            {
+                // If the generic handler was called, try to figure out how to convert the data
+                if (CreateDynamicFieldConverter(fieldInfo))
+                {
+                    return (string)ConvertToString[fieldInfo.FieldType].DynamicInvoke(fieldInfo, obj);
+                }
+                return null;
+            });
+        }
+
+        private static bool CreateDynamicFieldConverter(FieldInfo fieldInfo)
+        {
+            var functions = fieldInfo.FieldType.GetRuntimeMethods();
+            foreach (var func in functions)
+            {
+                switch(func.Name)
+                {
+                    case "TryParse":
+                        var parameters = func.GetParameters();
+                        if (parameters.Count() != 2)
+                            continue;
+
+                        ConvertFromString.TryAdd(fieldInfo.FieldType, (fi, v) =>
+                        {
+                            //Plugin.Log($"Parsing type {fi.FieldType.Name} from field {fi.Name}");
+                            object ret = null;
+                            try
+                            {
+                                var p = new object[] { v, null };
+                                if ((bool)func.Invoke(null, p))
+                                {
+                                    ret = p[1];
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Plugin.Log($"Error while parsing type {fi.FieldType.Name} from field {fi.Name}! {ex.ToString()}");
+                            }
+                            Plugin.Log($"{fi.Name}={ret.ToString()}");
+                            return ret;
+                        });
+                        ConvertToString.TryAdd(fieldInfo.FieldType, (fi, v) => { return v.GetField(fi.Name).ToString(); });
+                        return true;
+                }
+            }
+            return false;
         }
 
         public static void Load(object obj, string path)
@@ -61,8 +100,13 @@ namespace StreamCore.Config
                     string value = parts[1];
 
                     var fieldInfo = obj.GetType().GetField(key);
-                    if (ConvertFromString.TryGetValue(fieldInfo.FieldType, out var convertFromString))
-                        fieldInfo.SetValue(obj, convertFromString.Invoke(parts[1]));
+                    // Invoke our convertFromString method if it exists
+                    if (!ConvertFromString.TryGetValue(fieldInfo.FieldType, out var convertFromString))
+                    {
+                        // If not, call the default conversion handler and pray for the best
+                        ConvertFromString.TryGetValue(typeof(object), out convertFromString);
+                    }
+                    fieldInfo.SetValue(obj, convertFromString.Invoke(fieldInfo, value));
                 }
             }
         }
@@ -71,12 +115,17 @@ namespace StreamCore.Config
         {
             if (ConvertToString.Count == 0)
                 InitTypeHandlers();
-            
+
             List<string> serializedClass = new List<string>();
             foreach (var field in obj.GetType().GetFields())
             {
-                if (ConvertToString.TryGetValue(field.FieldType, out var convertToString))
-                    serializedClass.Add($"{field.Name}={convertToString.Invoke(field, obj)}");
+                // Invoke our convertFromString method if it exists
+                if (!ConvertToString.TryGetValue(field.FieldType, out var convertToString))
+                {
+                    // If not, call the default conversion handler and pray for the best
+                    ConvertToString.TryGetValue(typeof(object), out convertToString);
+                }
+                serializedClass.Add($"{field.Name}={convertToString.Invoke(field, obj)}");
             }
             if (path != string.Empty && serializedClass.Count > 0)
             {
