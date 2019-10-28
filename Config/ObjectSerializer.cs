@@ -26,6 +26,10 @@ namespace StreamCore.Config
             ConvertFromString.TryAdd(typeof(bool), (fieldInfo, value) => { return (value.Equals("true", StringComparison.CurrentCultureIgnoreCase) || value.Equals("1")); });
             ConvertToString.TryAdd(typeof(bool), (fieldInfo, obj) => { return ((bool)obj.GetField(fieldInfo.Name)).ToString(); });
 
+            // Enum handlers
+            ConvertFromString.TryAdd(typeof(Enum), (fieldInfo, value) => { return Enum.Parse(fieldInfo.FieldType, value); });
+            ConvertToString.TryAdd(typeof(Enum), (fieldInfo, obj) => { return obj.GetField(fieldInfo.Name).ToString(); });
+
             // Generic handler
             ConvertFromString.TryAdd(typeof(object), (fieldInfo, value) =>
             {
@@ -54,30 +58,12 @@ namespace StreamCore.Config
             {
                 switch(func.Name)
                 {
-                    case "TryParse":
+                    case "Parse":
                         var parameters = func.GetParameters();
-                        if (parameters.Count() != 2)
+                        if (parameters.Count() != 1)
                             continue;
 
-                        ConvertFromString.TryAdd(fieldInfo.FieldType, (fi, v) =>
-                        {
-                            //Plugin.Log($"Parsing type {fi.FieldType.Name} from field {fi.Name}");
-                            object ret = null;
-                            try
-                            {
-                                var p = new object[] { v, null };
-                                if ((bool)func.Invoke(null, p))
-                                {
-                                    ret = p[1];
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Plugin.Log($"Error while parsing type {fi.FieldType.Name} from field {fi.Name}! {ex.ToString()}");
-                            }
-                            Plugin.Log($"{fi.Name}={ret.ToString()}");
-                            return ret;
-                        });
+                        ConvertFromString.TryAdd(fieldInfo.FieldType, (fi, v) => { return func.Invoke(null, new object[] { v }); });
                         ConvertToString.TryAdd(fieldInfo.FieldType, (fi, v) => { return v.GetField(fi.Name).ToString(); });
                         return true;
                 }
@@ -116,14 +102,26 @@ namespace StreamCore.Config
 
                     // Otherwise, read the value in with the appropriate handler
                     var fieldInfo = obj.GetType().GetField(name);
+
+                    // If the fieldType is an enum, replace it with the generic Enum type
+                    Type fieldType = fieldInfo.FieldType.IsEnum ? typeof(Enum) : fieldInfo.FieldType;
+
                     // Invoke our ConvertFromString method if it exists
-                    if (!ConvertFromString.TryGetValue(fieldInfo.FieldType, out var convertFromString))
+                    if (!ConvertFromString.TryGetValue(fieldType, out var convertFromString))
                     {
                         // If not, call the default conversion handler and pray for the best
                         ConvertFromString.TryGetValue(typeof(object), out convertFromString);
                     }
-                    // Call the appropriate handler based on the type
-                    fieldInfo.SetValue(obj, convertFromString.Invoke(fieldInfo, value));
+                    try
+                    {
+                        object converted = convertFromString.Invoke(fieldInfo, value);
+                        // Call the appropriate handler based on the type
+                        fieldInfo.SetValue(obj, converted);
+                    }
+                    catch(Exception ex)
+                    {
+                        Plugin.Log($"Failed to parse value ${value} as type {fieldInfo.FieldType.Name}. {ex.ToString()}");
+                    }
                 }
                 Comments[path] = comments;
             }
@@ -137,16 +135,19 @@ namespace StreamCore.Config
             Comments.TryGetValue(path, out var commentDict);
 
             List<string> serializedClass = new List<string>();
-            foreach (var field in obj.GetType().GetFields())
+            foreach (var fieldInfo in obj.GetType().GetFields())
             {
+                // If the fieldType is an enum, replace it with the generic Enum type
+                Type fieldType = fieldInfo.FieldType.IsEnum ? typeof(Enum) : fieldInfo.FieldType;
+
                 // Invoke our convertFromString method if it exists
-                if (!ConvertToString.TryGetValue(field.FieldType, out var convertToString))
+                if (!ConvertToString.TryGetValue(fieldType, out var convertToString))
                 {
                     // If not, call the default conversion handler and pray for the best
                     ConvertToString.TryGetValue(typeof(object), out convertToString);
                 }
-                commentDict.TryGetValue(field.Name, out var comment);
-                serializedClass.Add($"{field.Name}={convertToString.Invoke(field, obj)}{(comment!=null?" //"+comment:"")}");
+                commentDict.TryGetValue(fieldInfo.Name, out var comment);
+                serializedClass.Add($"{fieldInfo.Name}={convertToString.Invoke(fieldInfo, obj)}{(comment!=null?" //"+comment:"")}");
             }
             if (path != string.Empty && serializedClass.Count > 0)
             {
