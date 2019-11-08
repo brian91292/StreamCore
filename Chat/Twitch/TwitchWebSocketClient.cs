@@ -521,7 +521,7 @@ namespace StreamCore.Twitch
                         {
                             twitchMsg.user = OurTwitchUser;
                             twitchMsg.hostString = OurTwitchUser.displayName;
-                            Plugin.Log($"Assembly hash is {assemblyHash}");
+                            //Plugin.Log($"Assembly hash is {assemblyHash}");
                         }
 
                         // Invoke twitch message callbacks

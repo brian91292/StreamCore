@@ -1,6 +1,10 @@
-﻿using System;
+﻿using StreamCore.SimpleJSON;
+using StreamCore.Utils;
+using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -12,7 +16,7 @@ namespace StreamCore.Config
 {
     public class ObjectSerializer
     {
-        private static readonly Regex _configRegex = new Regex(@"(?<Name>[^=\/\/#\s]+)\s*=\s*(?<Value>"".+ ""|[^#\/\/\s]+)?\s*(([\/\/]{2,2}|[#])(?<Comment>.+)?)?", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex _configRegex = new Regex(@"(?<Name>[^=\/\/#\s]+)\s*=\s*(?<Value>"".+ ""|{[^;]+?}|[a-zA-Z0-9.,-]+)?;?\s*((\/{2,2}|[#])(?<Comment>.+)?)?", RegexOptions.Compiled | RegexOptions.Multiline);
         private static readonly ConcurrentDictionary<Type, Func<FieldInfo, string, object>> ConvertFromString = new ConcurrentDictionary<Type, Func<FieldInfo, string, object>>();
         private static readonly ConcurrentDictionary<Type, Func<FieldInfo, object, string>> ConvertToString = new ConcurrentDictionary<Type, Func<FieldInfo, object, string>>();
         private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> Comments = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>();
@@ -53,18 +57,20 @@ namespace StreamCore.Config
 
         private static bool CreateDynamicFieldConverter(FieldInfo fieldInfo)
         {
+            Type fieldType = fieldInfo.FieldType;
+
             var functions = fieldInfo.FieldType.GetRuntimeMethods();
             foreach (var func in functions)
             {
-                switch(func.Name)
+                switch (func.Name)
                 {
                     case "Parse":
                         var parameters = func.GetParameters();
                         if (parameters.Count() != 1)
                             continue;
 
-                        ConvertFromString.TryAdd(fieldInfo.FieldType, (fi, v) => { return func.Invoke(null, new object[] { v }); });
-                        ConvertToString.TryAdd(fieldInfo.FieldType, (fi, v) => { return v.GetField(fi.Name).ToString(); });
+                        ConvertFromString.TryAdd(fieldType, (fi, v) => { return func.Invoke(null, new object[] { v }); });
+                        ConvertToString.TryAdd(fieldType, (fi, v) => { return v.GetField(fi.Name).ToString(); });
                         return true;
                 }
             }
@@ -120,7 +126,7 @@ namespace StreamCore.Config
                     }
                     catch(Exception ex)
                     {
-                        Plugin.Log($"Failed to parse value ${value} as type {fieldInfo.FieldType.Name}. {ex.ToString()}");
+                        Plugin.Log($"Failed to parse field {name} with value {value} as type {fieldInfo.FieldType.Name}. {ex.ToString()}");
                     }
                 }
                 Comments[path] = comments;
