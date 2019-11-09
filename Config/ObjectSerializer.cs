@@ -33,26 +33,6 @@ namespace StreamCore.Config
             // Enum handlers
             ConvertFromString.TryAdd(typeof(Enum), (fieldInfo, value) => { return Enum.Parse(fieldInfo.FieldType, value); });
             ConvertToString.TryAdd(typeof(Enum), (fieldInfo, obj) => { return obj.GetField(fieldInfo.Name).ToString(); });
-
-            // Generic handler
-            ConvertFromString.TryAdd(typeof(object), (fieldInfo, value) =>
-            {
-                // If the generic handler was called, try to figure out how to convert the data
-                if(CreateDynamicFieldConverter(fieldInfo))
-                {
-                    return ConvertFromString[fieldInfo.FieldType].DynamicInvoke(fieldInfo, value);
-                }
-                return null;
-            });
-            ConvertToString.TryAdd(typeof(object), (fieldInfo, obj) => 
-            {
-                // If the generic handler was called, try to figure out how to convert the data
-                if (CreateDynamicFieldConverter(fieldInfo))
-                {
-                    return (string)ConvertToString[fieldInfo.FieldType].DynamicInvoke(fieldInfo, obj);
-                }
-                return null;
-            });
         }
 
         private static bool CreateDynamicFieldConverter(FieldInfo fieldInfo)
@@ -115,13 +95,14 @@ namespace StreamCore.Config
                     // Invoke our ConvertFromString method if it exists
                     if (!ConvertFromString.TryGetValue(fieldType, out var convertFromString))
                     {
-                        // If not, call the default conversion handler and pray for the best
-                        ConvertFromString.TryGetValue(typeof(object), out convertFromString);
+                        if(CreateDynamicFieldConverter(fieldInfo))
+                        {
+                            convertFromString = ConvertFromString[fieldType];
+                        }
                     }
                     try
                     {
                         object converted = convertFromString.Invoke(fieldInfo, value);
-                        // Call the appropriate handler based on the type
                         fieldInfo.SetValue(obj, converted);
                     }
                     catch(Exception ex)
@@ -149,12 +130,24 @@ namespace StreamCore.Config
                 // Invoke our convertFromString method if it exists
                 if (!ConvertToString.TryGetValue(fieldType, out var convertToString))
                 {
-                    // If not, call the default conversion handler and pray for the best
-                    ConvertToString.TryGetValue(typeof(object), out convertToString);
+                    if (CreateDynamicFieldConverter(fieldInfo))
+                    {
+                        convertToString = ConvertToString[fieldType];
+                    }
                 }
-                string comment = null;
-                commentDict?.TryGetValue(fieldInfo.Name, out comment);
-                serializedClass.Add($"{fieldInfo.Name}={convertToString.Invoke(fieldInfo, obj)}{(comment!=null?" //"+comment:"")}");
+
+                string valueStr = "";
+                try
+                {
+                    string comment = null;
+                    commentDict?.TryGetValue(fieldInfo.Name, out comment);
+                    valueStr = $"{convertToString.Invoke(fieldInfo, obj)}{(comment != null ? " //" + comment : "")}";
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log($"Failed to convert field {fieldInfo.Name} to string! Value type is {fieldInfo.FieldType.Name}. {ex.ToString()}");
+                }
+                serializedClass.Add($"{fieldInfo.Name}={valueStr}");
             }
             if (path != string.Empty && serializedClass.Count > 0)
             {
