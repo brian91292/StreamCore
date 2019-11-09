@@ -20,7 +20,7 @@ namespace StreamCore
         private readonly TwitchLoginConfig TwitchLoginConfig = new TwitchLoginConfig();
         public static readonly string ModuleName = "Stream Core";
         public string Name => ModuleName;
-        public string Version => "2.2.1";
+        public string Version => "2.2.2";
 
         private static readonly object _loggerLock = new object();
         public static void Log(string text,
