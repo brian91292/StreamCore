@@ -16,7 +16,7 @@ namespace StreamCore.Config
 {
     public class ObjectSerializer
     {
-        private static readonly Regex _configRegex = new Regex(@"(?<Name>[^=\/\/#\s]+)\s*=[\t\p{Zs}]*(?<Value>"".+""|{[\s]+?}|\S+)?[\t\p{Zs}]*((\/{2,2}|[#])(?<Comment>.+)?)?", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex _configRegex = new Regex(@"(?<Name>[^=\/\/#\s]+)\s*=[\t\p{Zs}]*(?<Value>"".+""|({(?:[^{}]|(?<Array>{)|(?<-Array>}))+(?(Array)(?!))})|\S+)?[\t\p{Zs}]*((\/{2,2}|[#])(?<Comment>.+)?)?", RegexOptions.Compiled | RegexOptions.Multiline);
         private static readonly ConcurrentDictionary<Type, Func<FieldInfo, string, object>> ConvertFromString = new ConcurrentDictionary<Type, Func<FieldInfo, string, object>>();
         private static readonly ConcurrentDictionary<Type, Func<FieldInfo, object, string>> ConvertToString = new ConcurrentDictionary<Type, Func<FieldInfo, object, string>>();
         private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> Comments = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>();
@@ -24,7 +24,13 @@ namespace StreamCore.Config
         {
             // String handlers
             ConvertFromString.TryAdd(typeof(string), (fieldInfo, value) => { return (value.StartsWith("\"") && value.EndsWith("\"") ? value.Substring(1, value.Length - 2) : value); });
-            ConvertToString.TryAdd(typeof(string), (fieldInfo, obj) => { return $"\"{((string)obj.GetField(fieldInfo.Name))}\""; });
+            ConvertToString.TryAdd(typeof(string), (fieldInfo, obj) => {
+                string value = (string)obj.GetField(fieldInfo.Name);
+                // If the value is an array, we don't need quotes
+                if (value.StartsWith("{") && value.EndsWith("}"))
+                    return value;
+                return $"\"{value}\""; 
+            });
 
             // Bool handlers
             ConvertFromString.TryAdd(typeof(bool), (fieldInfo, value) => { return (value.Equals("true", StringComparison.CurrentCultureIgnoreCase) || value.Equals("1")); });
@@ -54,7 +60,7 @@ namespace StreamCore.Config
                         return true;
                 }
             }
-            return false;
+            throw new Exception($"Unsupported type {fieldType.Name} cannot be parsed by the ObjectSerializer!");
         }
 
         public static void Load(object obj, string path)
