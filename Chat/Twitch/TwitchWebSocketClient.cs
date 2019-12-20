@@ -263,7 +263,6 @@ namespace StreamCore.Twitch
 
                                 if (nextPing < DateTime.UtcNow)
                                 {
-                                    Plugin.Log("Ping!");
                                     if (!_ws.IsAlive)
                                     {
                                         Plugin.Log("Ping failed, reconnecting!");
