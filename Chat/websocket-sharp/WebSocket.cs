@@ -2183,8 +2183,8 @@ namespace WebSocketSharp
               message ();
             },
             ex => {
-              _logger.Fatal (ex.ToString ());
-              error ("An exception has occurred while receiving.", ex);
+              _logger.Error (ex.ToString ());
+              fatal ("An exception has occurred while receiving.", ex);
             }
           );
 

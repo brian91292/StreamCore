@@ -44,7 +44,7 @@ namespace StreamCore.Twitch
         /// <summary>
         /// The last time the client established a connection to the Twitch servers.
         /// </summary>
-        public static DateTime ConnectionTime { get; private set; } = DateTime.Now;
+        public static DateTime ConnectionTime { get; private set; } = DateTime.UtcNow;
 
         /// <summary>
         /// A dictionary of channel information for every channel we've joined during this session, the key is the channel name.
@@ -81,7 +81,7 @@ namespace StreamCore.Twitch
         /// </summary>
         public static bool IsChannelValid { get => ChannelInfo.TryGetValue(TwitchLoginConfig.Instance.TwitchChannelName, out var channelInfo) && channelInfo.roomId != String.Empty; }
 
-        private static DateTime _sendLimitResetTime = DateTime.Now;
+        private static DateTime _sendLimitResetTime = DateTime.UtcNow;
         private static int _reconnectCooldown = 500;
         private static int _fullReconnects = -1;
         private static string _lastChannel = "";
@@ -211,7 +211,7 @@ namespace StreamCore.Twitch
                         _ws.Send($"NICK {username}");
 
                         // Display a message in the chat informing the user whether or not the connection to the channel was successful
-                        ConnectionTime = DateTime.Now;
+                        ConnectionTime = DateTime.UtcNow;
 
                         // Invoke OnConnected event
                         if (OnConnected != null)
@@ -234,13 +234,14 @@ namespace StreamCore.Twitch
                     _ws.OnClose += (sender, e) =>
                     {
                         Plugin.Log("Twitch connection terminated.");
+                        LoggedIn = false;
                         Connected = false;
                     };
 
                     _ws.OnError += (sender, e) =>
                     {
+                        Plugin.Log($"An error occurred in the twitch connection! Error: {e.Message}, Exception: {e.Exception}");
                         LoggedIn = false;
-                        Plugin.Log($"An error occured in the twitch connection! Error: {e.Message}, Exception: {e.Exception}");
                         Connected = false;
                     };
 
@@ -254,20 +255,21 @@ namespace StreamCore.Twitch
                     {
                         try
                         {
-                            DateTime nextPing = DateTime.Now.AddSeconds(30);
+                            DateTime nextPing = DateTime.UtcNow.AddSeconds(30);
                             while (Connected && _ws.ReadyState == WebSocketState.Open)
                             {
                                 //Plugin.Log("Connected and alive!");
                                 Thread.Sleep(500);
 
-                                if (nextPing < DateTime.Now)
+                                if (nextPing < DateTime.UtcNow)
                                 {
+                                    Plugin.Log("Ping!");
                                     if (!_ws.IsAlive)
                                     {
                                         Plugin.Log("Ping failed, reconnecting!");
                                         break;
                                     }
-                                    nextPing = DateTime.Now.AddSeconds(30);
+                                    nextPing = DateTime.UtcNow.AddSeconds(30);
                                 }
                             }
                         }
@@ -325,10 +327,10 @@ namespace StreamCore.Twitch
             {
                 if (LoggedIn && _ws.ReadyState == WebSocketState.Open)
                 {
-                    if (_sendLimitResetTime < DateTime.Now)
+                    if (_sendLimitResetTime < DateTime.UtcNow)
                     {
                         _messagesSent = 0;
-                        _sendLimitResetTime = DateTime.Now.AddSeconds(_sendResetInterval);
+                        _sendLimitResetTime = DateTime.UtcNow.AddSeconds(_sendResetInterval);
                     }
 
                     if (_sendQueue.Count > 0)
